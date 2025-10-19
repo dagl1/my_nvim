@@ -34,8 +34,41 @@ vim.keymap.set("n", "k", "gk")
 vim.keymap.set("v", "j", "gj")
 vim.keymap.set("v", "k", "gk")
 
+vim.keymap.set({'v','x','s'}, 'd', function()
+  vim.cmd('normal! x')
+end, { noremap = true, silent = true })
 
+vim.keymap.set('x', 'd', ':<C-u>normal! x<CR>', { noremap = true, silent = true })
 
+-- Define session paths
+local session_path = vim.fn.stdpath("data") .. "/last_session.vim"
+-- Create a session (force overwrite)
+vim.keymap.set("n", "<leader>mk", function()
+  vim.cmd("silent! wa")  -- write all modified buffers
+  vim.cmd("mksession! " .. session_path)
+  print("💾 Session saved to " .. session_path)
+end, { desc = "Make (save) session" })
+
+-- Load the last session
+vim.keymap.set("n", "<leader>lk", function()
+  if vim.fn.filereadable(session_path) == 1 then
+    vim.cmd("silent! source " .. session_path)
+    print("📂 Session loaded from " .. session_path)
+  else
+    print("⚠️ No saved session found at " .. session_path)
+  end
+end, { desc = "Load last session" })
+
+-- Open Neovim config folder
+vim.keymap.set("n", "<leader>cg", function()
+  vim.cmd("Explore")
+end, { desc = "Go to folder of current file" })
+
+vim.keymap.set("n", "<leader>cf", function()
+  local config_dir = vim.fn.stdpath("config")
+  vim.cmd("cd " .. config_dir)
+  vim.cmd("Explore " .. config_dir .. "/")
+end, { desc = "Go to lua config directory" })
 -- TODO
 -- -- In insert mode: Ctrl+Enter splits the line at cursor with smart indent
 -- vim.keymap.set("n", "<C-M>", "<CR>")
@@ -45,12 +78,6 @@ vim.keymap.set("v", "k", "gk")
 vim.keymap.set("n", "<leader><CR>", "<Esc>i<CR><Esc>^m`o<Esc>", 
     { noremap = true, silent = true, desc = "Smart line break at cursor" }
 )
-
-
-
-
-
-
 -- Visual mode: delete to end of screen line
 -- Normal mode: delete to end of screen line
 -- Yank to end of screen line
