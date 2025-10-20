@@ -43,14 +43,14 @@ vim.keymap.set('x', 'd', ':<C-u>normal! x<CR>', { noremap = true, silent = true 
 -- Define session paths
 local session_path = vim.fn.stdpath("data") .. "/last_session.vim"
 -- Create a session (force overwrite)
-vim.keymap.set("n", "<leader>mk", function()
+vim.keymap.set("n", "<leader>ms", function()
   vim.cmd("silent! wa")  -- write all modified buffers
   vim.cmd("mksession! " .. session_path)
   print("💾 Session saved to " .. session_path)
 end, { desc = "Make (save) session" })
 
 -- Load the last session
-vim.keymap.set("n", "<leader>lk", function()
+vim.keymap.set("n", "<leader>ls", function()
   if vim.fn.filereadable(session_path) == 1 then
     vim.cmd("silent! source " .. session_path)
     print("📂 Session loaded from " .. session_path)
@@ -60,11 +60,30 @@ vim.keymap.set("n", "<leader>lk", function()
 end, { desc = "Load last session" })
 
 -- Open Neovim config folder
-vim.keymap.set("n", "<leader>cg", function()
+vim.keymap.set("n", "<leader>cf", function()
   vim.cmd("Explore")
 end, { desc = "Go to folder of current file" })
 
-vim.keymap.set("n", "<leader>cf", function()
+vim.keymap.set("n", "<leader>w", function()
+    vim.cmd("w")
+end, {desc = "Substitute for :w"})
+
+vim.keymap.set("n", "<leader>%", function()
+  local config_dir = vim.fn.stdpath("config")
+-- clear all Lua modules from your config namespace
+  for name, _ in pairs(package.loaded) do
+    if name:match("^core") or name:match("^plugins") then
+      package.loaded[name] = nil
+    end
+  end
+
+  -- now re-load init.lua fresh
+  dofile(config_dir .. "/init.lua")
+
+  vim.notify("Config reloaded!", vim.log.levels.INFO)
+end, { desc = "source init.lua" })
+
+vim.keymap.set("n", "<leader>cg", function()
   local config_dir = vim.fn.stdpath("config")
   vim.cmd("cd " .. config_dir)
   vim.cmd("Explore " .. config_dir .. "/")
