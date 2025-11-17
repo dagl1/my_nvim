@@ -122,3 +122,8 @@ vim.keymap.set("n", "y$", "yg$")
 --
 --
 
+
+-- zotcite
+--
+vim.keymap.set({ "i", "n" }, "<leader>e", "<Plug>ZCite", { silent = true })
+vim.keymap.set({ "i", "n" }, "<leader>b", "<Plug>ZotciteComplete", { silent = true })
