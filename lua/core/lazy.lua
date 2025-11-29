@@ -30,4 +30,9 @@ require("lazy").setup({
   install = { colorscheme = { "habamax" } },
   -- automatically check for plugin updates
   checker = { enabled = true },
+},{
+  rocks = {
+    enabled = true,      -- enable LuaRocks support
+    hererocks = true,    -- enable automatic hererocks bootstrap
+  }
 })

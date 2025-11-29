@@ -120,10 +120,9 @@ vim.keymap.set("n", "y$", "yg$")
 -- " Remap ]m to jump to the next def
 -- nnoremap ]m /^\s*def\s<CR> ww
 --
---
 
+vim.keymap.set("i", "<c-b>", "<Plug>ZCite")
+-- inoremap <C-x><C-o> <cmd>lua require('zotcite').complete()<CR>
 
 -- zotcite
 --
-vim.keymap.set({ "i", "n" }, "<leader>e", "<Plug>ZCite", { silent = true })
-vim.keymap.set({ "i", "n" }, "<leader>b", "<Plug>ZotciteComplete", { silent = true })
