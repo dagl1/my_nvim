@@ -51,9 +51,28 @@ vim.api.nvim_create_autocmd("FileType", {
   end,
 })
 
-vim.opt.swapfile = false
-vim.opt.backup = false
-vim.opt.undofile = false
+vim.opt.undofile = true
+vim.opt.undodir = vim.fn.stdpath("data") .. "/undo//"
+
+vim.opt.swapfile = true
+vim.opt.directory = vim.fn.stdpath("data") .. "/swap//"
+
+vim.opt.backup = true
+vim.opt.writebackup = true
+vim.opt.backupdir = vim.fn.stdpath("data") .. "/backup//"
+
+vim.opt.updatetime = 300
+
+-- Create dirs automatically (NO INVALID ... SYNTAX)
+local recovery_dirs = {
+  vim.fn.stdpath("data") .. "/undo",
+  vim.fn.stdpath("data") .. "/swap",
+  vim.fn.stdpath("data") .. "/backup",
+}
+
+for _, dir in ipairs(recovery_dirs) do
+  vim.fn.mkdir(dir, "p")
+end
 
 vim.opt.incsearch = true 
 vim.opt.inccommand = "split"
