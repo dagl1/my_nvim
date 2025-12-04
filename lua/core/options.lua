@@ -103,3 +103,5 @@ vim.env.CC = "gcc"
 vim.env.CXX = "g++"
 vim.g.python3_host_prog = "C:/Python314/python.exe"
 
+-- directory and file navigation
+vim.opt.autochdir = true
