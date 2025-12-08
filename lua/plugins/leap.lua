@@ -2,7 +2,7 @@ return {
    "ggandor/leap.nvim",
   config = function()
     local leap = require("leap")
-    leap.add_default_mappings()
+    --leap.add_default_mappings()
 
     -- ✅ Force label mode instead of instant jump
     leap.opts.safe_labels = {}
