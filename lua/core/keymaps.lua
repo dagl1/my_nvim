@@ -2,7 +2,9 @@ local opts = { noremap = true, silent = true }
 
 vim.g.mapleader = ","
 vim.g.maplocalleader = ","
- 
+
+vim.keymap.set('n', '<Esc>', '<cmd>nohlsearch<CR>')
+
 vim.keymap.set("n", "Z", '"ayiwviw"0p', 
     {desc = "Yank word to register a, then paste last yank" }
 )

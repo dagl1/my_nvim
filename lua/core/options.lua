@@ -21,6 +21,7 @@ vim.opt.linebreak = true
 vim.opt.textwidth = 0
 vim.opt.formatoptions:remove("t")
 
+
 -- function to dynamically adjust wrapmargin for soft wrapping
 local function set_soft_wrap_at_column(col)
   -- how many columns from right margin to start wrapping
