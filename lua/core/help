@@ -3,8 +3,6 @@ local opts = { noremap = true, silent = true }
 vim.g.mapleader = ","
 vim.g.maplocalleader = ","
 
-
-
 vim.keymap.set('n', '<Esc>', '<cmd>nohlsearch<CR>')
 
 vim.keymap.set("n", "Z", '"ayiwviw"0p', 
@@ -23,17 +21,6 @@ vim.keymap.set("v", "y", "ygv<Esc>",
 )
 -- Insert mode: Ctrl+[ acts like Escape
 vim.keymap.set("i", "<C-[>", "<Esc>")
--- vim.keymap.set('x', 'd', ':<C-u>normal! x<CR>', { noremap = true, silent = true })
-vim.keymap.set('x', 'd', 'd', { noremap = true })
-vim.keymap.set({'v','x','s'}, 'd', function()
-  vim.cmd('normal! x')
-end, { noremap = true, silent = true })
-vim.o.timeoutlen = 500
-
-vim.api.nvim_create_user_command("ReloadKeymaps", function()
-  dofile(vim.fn.stdpath("config") .. "\\lua\\core\\keymaps.lua")
-end, {})
-
 
 
 -- Normal mode: keep cursor centered when scrolling half-page up/down
@@ -48,6 +35,12 @@ vim.keymap.set("n", "j", "gj")
 vim.keymap.set("n", "k", "gk")
 vim.keymap.set("v", "j", "gj")
 vim.keymap.set("v", "k", "gk")
+
+vim.keymap.set({'v','x','s'}, 'd', function()
+  vim.cmd('normal! x')
+end, { noremap = true, silent = true })
+
+vim.keymap.set('x', 'd', ':<C-u>normal! x<CR>', { noremap = true, silent = true })
 
 -- Define session paths
 local session_path = vim.fn.stdpath("data") .. "/last_session.vim"
@@ -111,6 +104,7 @@ vim.keymap.set("n", "<leader><CR>", "<Esc>i<CR><Esc>^m`o<Esc>",
 -- Yank to end of screen line
 -- Change to end of screen line
 vim.keymap.set("n", "d$", "dg$")
+vim.keymap.set("v", "d$", "dg$")
 vim.keymap.set("n", "c$", "cg$")
 vim.keymap.set("n", "y$", "yg$")
 
