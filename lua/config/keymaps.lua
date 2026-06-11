@@ -75,3 +75,24 @@ vim.schedule(function()
   pcall(vim.keymap.del, "n", "<leader>r")
   pcall(vim.keymap.del, "n", "<localleader>r")
 end)
+-------------------- register yank paste ---------------------------------
+-- Protect: Copies text AND its type (line/character) from @0 into safe storage @z
+vim.keymap.set("n", "<Leader>py", function()
+  local text = vim.fn.getreg("0")
+  local regtype = vim.fn.getregtype("0")
+  vim.fn.setreg("z", text, regtype)
+end, { desc = "Protect last yank" })
+
+-- Restore: Overwrites EVERY possible paste register with your safe text from @z
+vim.keymap.set("n", "<Leader>yp", function()
+  local text = vim.fn.getreg("z")
+  local regtype = vim.fn.getregtype("z")
+
+  -- Force it back into standard Vim registers
+  vim.fn.setreg("0", text, regtype)
+  vim.fn.setreg('"', text, regtype)
+
+  -- Force it into system clipboard registers (Fixes clipboard=unnamed/unnamedplus)
+  vim.fn.setreg("+", text, regtype)
+  vim.fn.setreg("*", text, regtype)
+end, { desc = "Restore protected yank" })
