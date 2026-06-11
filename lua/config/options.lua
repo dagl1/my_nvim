@@ -5,7 +5,6 @@
 vim.g.mapleader = ","
 vim.g.maplocalleader = ","
 
-vim.opt.clipboard = "unnamedplus"
 -- stable indentation behavior (IDE-like, Python-friendly)
 
 vim.opt.autoindent = true
@@ -24,3 +23,7 @@ vim.g.python_recommended_style = 0
 
 vim.o.sessionoptions = "buffers,curdir,tabpages,winsize,help"
 vim.opt.shortmess:append("cC")
+
+vim.g.snacks_animate = false
+vim.opt.formatoptions:remove({ "o" })
+vim.opt.clipboard = "unnamedplus"

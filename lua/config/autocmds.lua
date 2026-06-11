@@ -8,6 +8,7 @@
 -- e.g. vim.api.nvim_del_augroup_by_name("lazyvim_wrap_spell")
 --
 vim.api.nvim_create_autocmd("VimEnter", {
+
   callback = function()
     local root = LazyVim.root()
     if root then
@@ -28,5 +29,17 @@ vim.api.nvim_create_autocmd("FileType", {
     vim.schedule(function()
       vim.api.nvim_win_set_option(0, "winhighlight", "")
     end)
+  end,
+})
+vim.api.nvim_create_autocmd("FileType", {
+  pattern = "toggleterm",
+  callback = function(args)
+    vim.b.miniai_disable = true
+  end,
+})
+vim.api.nvim_create_autocmd("FileType", {
+  pattern = "*",
+  callback = function()
+    vim.opt_local.formatoptions:remove({ "o" })
   end,
 })

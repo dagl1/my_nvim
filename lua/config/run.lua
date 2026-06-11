@@ -1,12 +1,24 @@
 -- lua/config/run.lua
 local M = {}
 
+local function is_term_open(term)
+  if term.window and vim.api.nvim_win_is_valid(term.window) then
+    return true
+  end
+  return false
+end
+
+local function to_bool(v)
+  return v == "true" or v == "1" or v == "yes"
+end
+
 M.configs = {
   dev = {
     source_dir = vim.fn.getcwd(),
     file = "main.py",
     venv = ".venv",
     args = "",
+    use_module = false,
   },
 }
 
@@ -34,23 +46,103 @@ function M.run()
   local source_dir = cfg.source_dir or vim.fn.getcwd()
   local venv = cfg.venv or ".venv"
   local python = resolve_python(venv, source_dir)
-  local file = vim.fn.getcwd() .. "/" .. cfg.file
+  local file = source_dir .. "/" .. cfg.file
+  local module = cfg.module or ""
   local args = cfg.args or ""
 
-  local cmd = table.concat({
-    "cd",
-    source_dir,
-    "&&",
-    python,
-    "-m",
-    file,
-    args or "",
-  }, " ")
+  local cmd
 
-  vim.cmd("ToggleTerm direction=float")
-  vim.cmd("TermExec cmd='" .. cmd .. "'")
+  if cfg.use_module then
+    cmd = table.concat({
+      "cd",
+      source_dir,
+      "&&",
+      "uv run",
+      "-m",
+      module,
+      args,
+    }, " ")
+  else
+    cmd = table.concat({
+      python,
+      file,
+      args,
+    }, " ")
+  end
+
+  local runner = _G.python_runner
+  if not runner then
+    vim.notify("Runner not initialized", vim.log.levels.ERROR)
+    return
+  end
+
+  local win = runner.window
+  if win and vim.api.nvim_win_is_valid(win) then
+    -- just focus existing window (NO new open)
+    vim.api.nvim_set_current_win(win)
+  else
+    -- only open if it doesn't exist yet
+    runner:open()
+  end
+  -- refresh window reference after open
+  win = runner.window
+  if not win or not vim.api.nvim_win_is_valid(win) then
+    vim.notify("ToggleTerm window not ready", vim.log.levels.ERROR)
+    return
+  end
+  if not win or not vim.api.nvim_win_is_valid(win) then
+    vim.notify("ToggleTerm window not ready", vim.log.levels.ERROR)
+    return
+  end
+
+  local height = vim.api.nvim_win_get_height(win)
+
+  runner:send(string.rep("\n", height))
+  runner:send(cmd .. "\n")
 end
 
+function M.run_python_file()
+  local file = vim.fn.expand("%:p")
+
+  if not file:lower():match("%.py$") then
+    local message = "File " .. file .. " is not a python file and thus cannot run!"
+    vim.notify(message, vim.log.levels.ERROR)
+    return
+  end
+
+  -- try venv first
+  local venv_python = vim.fn.getcwd() .. "/.venv/bin/python"
+  local python = vim.fn.executable(venv_python) == 1 and venv_python or "python"
+
+  local runner = _G.python_runner
+  if not runner then
+    vim.notify("Runner not initialized", vim.log.levels.ERROR)
+    return
+  end
+
+  local win = runner.window
+  if win and vim.api.nvim_win_is_valid(win) then
+    -- just focus existing window (NO new open)
+    vim.api.nvim_set_current_win(win)
+  else
+    -- only open if it doesn't exist yet
+    runner:open()
+  end
+  -- refresh window reference after open
+  win = runner.window
+  if not win or not vim.api.nvim_win_is_valid(win) then
+    vim.notify("ToggleTerm window not ready", vim.log.levels.ERROR)
+    return
+  end
+
+  if not win or not vim.api.nvim_win_is_valid(win) then
+    vim.notify("ToggleTerm window not ready", vim.log.levels.ERROR)
+    return
+  end
+  local height = vim.api.nvim_win_get_height(win)
+  runner:send(string.rep("\n", height))
+  runner:send(python .. " '" .. file .. "'", true)
+end
 function M.set_active(name)
   if M.configs[name] then
     M.active = name
@@ -76,23 +168,46 @@ function M.prompt_add()
       return
     end
 
-    vim.ui.input({ prompt = "Source_dir : " }, function(source_dir)
-      if not source_dir or source_dir == "" then
-        return
-      end
-
-      vim.ui.input({ prompt = "File: " }, function(file)
-        if not file then
+    vim.ui.input({ prompt = "Use module : " }, function(use_module)
+      vim.ui.input({ prompt = "Source_dir : " }, function(source_dir)
+        if not source_dir or source_dir == "" then
           return
         end
 
-        vim.ui.input({ prompt = "Venv (.venv): ", default = ".venv" }, function(venv)
-          M.add(name, {
-            file = file,
-            venv = venv,
-          })
+        vim.ui.input({ prompt = "File: " }, function(file)
+          if not file then
+            return
+          end
+          vim.ui.input({ prompt = "Args: " }, function(args)
+            if not args then
+              return
+            end
 
-          vim.notify("Added config: " .. name)
+            vim.ui.input({ prompt = "Venv (.venv): ", default = ".venv" }, function(venv)
+              if use_module then
+                M.configs[name] = {
+                  use_module = use_module,
+                  source_dir = source_dir,
+                  module = file,
+                  file = "",
+                  venv = venv,
+                  args = args,
+                }
+              else
+                M.configs[name] = {
+                  use_module = use_module,
+                  source_dir = source_dir,
+                  module = "",
+                  file = file,
+
+                  venv = venv,
+                  args = args,
+                }
+              end
+
+              vim.notify("Added config: " .. name)
+            end)
+          end)
         end)
       end)
     end)
@@ -119,32 +234,48 @@ function M.edit(name)
     return
   end
 
-  vim.ui.input({ prompt = "source_dir:", default = cfg.source_dir }, function(file)
-    if not file then
-      return
-    end
-    vim.ui.input({ prompt = "File:", default = cfg.file }, function(file)
-      if not file then
+  vim.ui.input({ prompt = "Use module : " }, function(use_module)
+    use_module = to_bool(use_module)
+    vim.ui.input({ prompt = "source_dir:", default = cfg.source_dir }, function(source_dir)
+      if not source_dir then
         return
       end
-
-      vim.ui.input({ prompt = "Venv:", default = cfg.venv or ".venv" }, function(venv)
-        if not venv then
+      vim.ui.input({ prompt = "File:", default = cfg.file }, function(file)
+        if not file then
           return
         end
 
-        vim.ui.input({ prompt = "Args:", default = cfg.args or "" }, function(args)
-          if args == nil then
+        vim.ui.input({ prompt = "Venv:", default = cfg.venv or ".venv" }, function(venv)
+          if not venv then
             return
           end
 
-          M.configs[name] = {
-            file = file,
-            venv = venv,
-            args = args,
-          }
+          vim.ui.input({ prompt = "Args:", default = cfg.args or "" }, function(args)
+            if args == nil then
+              return
+            end
 
-          vim.notify("Updated config: " .. name)
+            if use_module then
+              M.configs[name] = {
+                use_module = use_module,
+                source_dir = source_dir,
+                module = file,
+                file = "",
+                venv = venv,
+                args = args,
+              }
+            else
+              M.configs[name] = {
+                use_module = use_module,
+                source_dir = source_dir,
+                file = file,
+                venv = venv,
+                args = args,
+              }
+            end
+
+            vim.notify("Updated config: " .. name)
+          end)
         end)
       end)
     end)
@@ -181,18 +312,6 @@ function M.open_menu()
       end
     end)
   end)
-end
-
-function M.run_python_file()
-  local file = vim.fn.expand("%:p")
-
-  -- try venv first
-  local venv_python = vim.fn.getcwd() .. "/.venv/bin/python"
-
-  local python = vim.fn.executable(venv_python) == 1 and venv_python or "python"
-
-  vim.cmd("ToggleTerm direction=float")
-  vim.cmd("TermExec cmd='" .. python .. " " .. file .. "'")
 end
 
 local path = vim.fn.getcwd() .. "/.nvim-run.json"

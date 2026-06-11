@@ -37,11 +37,24 @@ vim.keymap.set("n", "<C-_>", function()
   require("Comment.api").toggle.linewise.current()
 end, { silent = true })
 
-vim.keymap.set({ "n", "t" }, "<F4>", function()
-  Snacks.terminal.focus(nil, { cwd = LazyVim.root() })
-end, { desc = "Terminal (Root Dir)" })
+------------- Terminal only commands --------
+vim.keymap.set("t", "<>", [[<C-\><C-n>]])
+vim.keymap.set("t", "<Esc", [[<C-\><C-n>]])
 
--- vim.keymap.set("n", )
+------------- Toggle terminal ---------------
+local root_term
+vim.keymap.set({ "n", "t" }, "<F4>", function()
+  if not root_term then
+    root_term = Snacks.terminal(nil, {
+      cwd = LazyVim.root(),
+    })
+  else
+    root_term:toggle()
+  end
+end)
+
+------------ Toggleterm terminal -------------
+-- See plugins/toggleterm.lua, set to F16 (shift + F4)
 
 vim.keymap.set("v", "y", function()
   vim.cmd("normal! y")
@@ -71,10 +84,6 @@ vim.keymap.set("n", "<leader>ra", run.prompt_add, { desc = "Add config" })
 vim.keymap.set("n", "gd", function()
   Snacks.picker.lsp_declarations()
 end)
-vim.schedule(function()
-  pcall(vim.keymap.del, "n", "<leader>r")
-  pcall(vim.keymap.del, "n", "<localleader>r")
-end)
 -------------------- register yank paste ---------------------------------
 -- Protect: Copies text AND its type (line/character) from @0 into safe storage @z
 vim.keymap.set("n", "<Leader>py", function()
@@ -96,3 +105,12 @@ vim.keymap.set("n", "<Leader>yp", function()
   vim.fn.setreg("+", text, regtype)
   vim.fn.setreg("*", text, regtype)
 end, { desc = "Restore protected yank" })
+
+--------------- Tooling keymaps and functions ---------------
+require("config.tooling")
+
+--------------- overwrite weird leader ----------------------
+vim.schedule(function()
+  pcall(vim.keymap.del, "n", "<leader>r")
+  pcall(vim.keymap.del, "n", "<localleader>r")
+end)
