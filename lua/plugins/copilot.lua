@@ -31,4 +31,24 @@ return {
   {
     { "zbirenbaum/copilot-cmp", enabled = false },
   },
+  {
+    "CopilotC-Nvim/CopilotChat.nvim",
+    dependencies = {
+      { "nvim-lua/plenary.nvim", branch = "master" },
+    },
+    build = "make tiktoken",
+
+    opts = {
+      context = "buffers",
+      chat_autocomplete = false,
+      sticky = "#buffer:active ",
+      auto_insert_mode = true,
+      mappings = {
+        close = {
+          normal = "",
+          insert = "",
+        },
+      },
+    },
+  },
 }

@@ -38,3 +38,12 @@ vim.opt.clipboard = "unnamedplus"
 -- Line movement/navigation
 vim.opt.whichwrap:append("<,>,h,l,[,]")
 vim.g.ai_cmp = false
+
+-- wrapping
+vim.opt.wrap = true
+vim.opt.linebreak = true
+vim.opt.breakindent = true
+-- set line width to 94
+vim.opt.textwidth = 94
+-- show a visual indicator at 94 characters
+vim.opt.colorcolumn = "94"

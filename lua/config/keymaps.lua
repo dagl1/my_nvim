@@ -196,6 +196,70 @@ vim.keymap.set({ "i", "n", "x" }, "<C-M-l>", function()
   end
 end, { silent = true })
 
+local function copilot_usage()
+  local username = "dagl1"
+  local token = os.getenv("GITHUB_TOKEN")
+  if not token then
+    vim.notify("Missing GITHUB_TOKEN", vim.log.levels.ERROR)
+    return
+  end
+
+  local cmd = string.format(
+    'curl -s -L -H "Accept: application/vnd.github+json" '
+      .. '-H "Authorization: Bearer %s" '
+      .. '-H "X-GitHub-Api-Version: 2026-03-10" '
+      .. "https://api.github.com/users/%s/settings/billing/premium_request/usage",
+    token,
+    username
+  )
+
+  local result = vim.fn.system(cmd)
+  local ok, data = pcall(vim.fn.json_decode, result)
+  if not ok then
+    vim.notify("Failed to parse GitHub response", vim.log.levels.ERROR)
+    return
+  end
+
+  local items = data.usageItems or {}
+  if #items == 0 then
+    vim.notify("No usage data found", vim.log.levels.WARN)
+    return
+  end
+
+  local total_used = 0
+  local total_cost = 0
+  local by_model = {}
+
+  for _, item in ipairs(items) do
+    local used = tonumber(item.netQuantity) or 0
+    local cost = tonumber(item.netAmount) or 0
+    total_used = total_used + used
+    total_cost = total_cost + cost
+
+    -- try to get meaningful key (productName, sku, description, fallback)
+    local key = item.productName or item.sku or item.description or "unknown"
+    by_model[key] = (by_model[key] or 0) + used
+  end
+
+  -- print breakdown
+  print("=== Copilot usage breakdown ===")
+  for k, v in pairs(by_model) do
+    print(string.format("%s : %s", k, tostring(v)))
+  end
+  print(string.format("Total used: %s", tostring(total_used)))
+  print(string.format("Total cost: $%.2f", total_cost))
+
+  -- optional percent of budget (adjust limit)
+  local limit = 300
+  local pct = (total_used / limit) * 100
+  vim.notify(
+    string.format("Copilot usage: %s / %d (%.1f%%) | $%.2f", tostring(total_used), limit, pct, total_cost),
+    vim.log.levels.INFO
+  )
+end
+
+vim.keymap.set("n", "<leader>cu", copilot_usage, { desc = "Copilot usage report" })
+
 --------------- overwrite weird leader ----------------------
 vim.schedule(function()
   pcall(vim.keymap.del, "n", "<leader>r")
