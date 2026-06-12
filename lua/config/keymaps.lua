@@ -12,9 +12,9 @@ vim.keymap.set("v", "<", "<gv<Esc>", { desc = "Indent left and deselect", silent
 -- Indent right and instantly exit visual mode
 vim.keymap.set("v", ">", ">gv<Esc>", { desc = "Indent right and deselect", silent = true })
 
--- vim.keymap.set("n","<C-/", )
 ---- Space behaves like b
 vim.keymap.set({ "n", "v" }, "<Space>", "b", { noremap = true, silent = true })
+
 -- Ctrl+Enter: split line at cursor, keep indentation
 vim.keymap.set("i", "<C-CR>", "<C-o>o", { silent = true })
 
@@ -31,6 +31,24 @@ vim.keymap.set("n", "<C-CR>", function()
 
   vim.api.nvim_win_set_cursor(0, { row + 1, #indent })
 end, { silent = true })
+
+-- File navigation
+local picker_opts_global = {
+  win = {
+    input = {
+      keys = {
+        ["<Esc>"] = { "close", mode = { "n", "i" } },
+      },
+    },
+  },
+}
+local picker_opts_cwd = vim.tbl_deep_extend("force", picker_opts_global, {
+  filter = { cwd = true },
+})
+vim.keymap.set({ "n" }, "<leader>fR", LazyVim.pick("oldfiles", picker_opts_global), { desc = "Recent" })
+vim.keymap.set({ "n" }, "<leader>fr", function()
+  Snacks.picker.recent(picker_opts_cwd)
+end, { desc = "Recent (cwd)" })
 
 -- Ctrl+/ toggle comment (normal + visual)
 vim.keymap.set("n", "<C-_>", function()
@@ -54,13 +72,73 @@ vim.keymap.set({ "n", "t" }, "<F4>", function()
 end)
 
 ------------ Toggleterm terminal -------------
--- See plugins/toggleterm.lua, set to F16 (shift + F4)
+-- See ~/git/my_nvim/lua/plugins/toggleterm.lua, set to F16 (shift + F4)
 
-vim.keymap.set("v", "y", function()
-  vim.cmd("normal! y")
-  vim.cmd("normal! `>")
-end, { desc = "Yank and go to bottom of selection" })
+-------------------- register yank paste ---------------------------------
+local visual_state = {
+  mode = nil,
+  viw_start = nil,
+}
 
+vim.on_key(function(key)
+  if key == "v" or key == "V" or key == "\22" then
+    visual_state.mode = vim.fn.visualmode()
+  end
+end)
+
+vim.keymap.set("n", "viw", function()
+  visual_state.viw_start = vim.api.nvim_win_get_cursor(0)
+  vim.cmd("normal! viw")
+end)
+
+vim.keymap.set("x", "y", function()
+  vim.cmd.normal({ args = { "y" }, bang = true })
+  if visual_state.viw_start then
+    vim.api.nvim_win_set_cursor(0, visual_state.viw_start)
+    visual_state.viw_start = nil
+    visual_state.mode = nil
+    return
+  end
+
+  if visual_state.mode == "V" then
+    vim.cmd.normal({ args = { "'>" }, bang = true })
+    return
+  end
+end)
+
+-- Special yank
+vim.keymap.set({ "v", "n" }, "Z", '"ayiwviw"0p', { desc = "Non-overriding visual paste" })
+-- Protect: Copies text AND its type (line/character) from @0 into safe storage @z
+vim.keymap.set("n", "<Leader>py", function()
+  local target_reg = "0"
+  -- Check if the system clipboard has content (safely fetches from OS)
+  local system_text = vim.fn.getreg("+")
+  if system_text and system_text ~= "" then
+    target_reg = "+"
+  end
+
+  local text = vim.fn.getreg(target_reg)
+  local regtype = vim.fn.getregtype(target_reg)
+
+  vim.fn.setreg("z", text, regtype)
+end, { desc = "Protect last yank" })
+
+-- Restore: Overwrites EVERY possible paste register with your safe text from @z
+vim.keymap.set("n", "<Leader>yp", function()
+  local text = vim.fn.getreg("z")
+  local regtype = vim.fn.getregtype("z")
+
+  -- Force it back into standard Vim registers
+  vim.fn.setreg("0", text, regtype)
+  vim.fn.setreg('"', text, regtype)
+
+  -- Force it into system clipboard registers (Fixes clipboard=unnamed/unnamedplus)
+  vim.fn.setreg("+", text, regtype)
+  vim.fn.setreg("*", text, regtype)
+end, { desc = "Restore protected yank" })
+
+-------------------------------------------------------------------------------
+-- Comments
 vim.keymap.set("v", "<C-_>", function()
   vim.cmd("normal gcc")
   vim.cmd("normal gv")
@@ -80,34 +158,43 @@ vim.keymap.set("n", "<leader>re", run.open_menu, { desc = "Run config menu" })
 vim.keymap.set("n", "F22", run.run, { desc = "Run active config" })
 vim.keymap.set("n", "<leader>ro", run.run, { desc = "Run active config" })
 vim.keymap.set("n", "<leader>ra", run.prompt_add, { desc = "Add config" })
+
 ---------------------- code navigation ----------------------
-vim.keymap.set("n", "gd", function()
-  Snacks.picker.lsp_declarations()
-end)
--------------------- register yank paste ---------------------------------
--- Protect: Copies text AND its type (line/character) from @0 into safe storage @z
-vim.keymap.set("n", "<Leader>py", function()
-  local text = vim.fn.getreg("0")
-  local regtype = vim.fn.getregtype("0")
-  vim.fn.setreg("z", text, regtype)
-end, { desc = "Protect last yank" })
-
--- Restore: Overwrites EVERY possible paste register with your safe text from @z
-vim.keymap.set("n", "<Leader>yp", function()
-  local text = vim.fn.getreg("z")
-  local regtype = vim.fn.getregtype("z")
-
-  -- Force it back into standard Vim registers
-  vim.fn.setreg("0", text, regtype)
-  vim.fn.setreg('"', text, regtype)
-
-  -- Force it into system clipboard registers (Fixes clipboard=unnamed/unnamedplus)
-  vim.fn.setreg("+", text, regtype)
-  vim.fn.setreg("*", text, regtype)
-end, { desc = "Restore protected yank" })
+-- See ~/git/my_nvim/lua/plugins/snacks.lua for gd overwrite (from declaration to references)
 
 --------------- Tooling keymaps and functions ---------------
 require("config.tooling")
+
+--------------- Copilot -------------------------------------
+-- accept ghost text with alt-r
+vim.keymap.set({ "i" }, "<M-r>", function()
+  local copilot = require("copilot.suggestion")
+  if copilot.is_visible() then
+    copilot.accept()
+  else
+    --
+  end
+end, { silent = true })
+
+-- accept next word of ghost test with alt-l
+vim.keymap.set({ "i", "n", "x" }, "<M-l>", function()
+  local copilot = require("copilot.suggestion")
+  if copilot.is_visible() then
+    copilot.accept_word()
+  else
+    vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes("<M-l>", true, false, true), "n", true)
+  end
+end, { silent = true })
+
+-- next line of ghost text with ctrl + alt + l
+vim.keymap.set({ "i", "n", "x" }, "<C-M-l>", function()
+  local copilot = require("copilot.suggestion")
+  if copilot.is_visible() then
+    copilot.accept_line()
+  else
+    vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes("<C-M-l>", true, false, true), "n", true)
+  end
+end, { silent = true })
 
 --------------- overwrite weird leader ----------------------
 vim.schedule(function()

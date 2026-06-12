@@ -30,10 +30,12 @@ return {
       runner = _G.python_runner
     end
 
-    -- SHIFT-F4 (your F16)
-    vim.keymap.set({ "n", "t" }, "<F16>", function()
+    local python_runner_func = function()
       runner:toggle()
-    end, { desc = "Python runner terminal" })
+    end
+    vim.keymap.set({ "n", "t" }, "<SHIFT-F4>", python_runner_func, { desc = "Python runner terminal toggle" })
+    vim.keymap.set({ "n", "t" }, "<F16>", python_runner_func, { desc = "Python runner terminal toggle" })
+    vim.keymap.set({ "n", "t" }, "<S-F4>", python_runner_func, { desc = "Python runner terminal toggle" })
 
     vim.keymap.set("t", "<>", [[<C-\><C-n>]])
     vim.keymap.set("t", "<Esc>", [[<C-\><C-n>]])

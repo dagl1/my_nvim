@@ -1,8 +1,20 @@
 return {
   "saghen/blink.cmp",
+
   opts = {
+    -- completion sources (THIS is the important part)
+    sources = {
+      default = {
+        "lsp",
+        "path",
+        "buffer",
+        -- ❌ NO "copilot"
+      },
+    },
+
     keymap = {
       preset = "super-tab",
+
       ["<Tab>"] = {
         function(cmp)
           if cmp.snippet_active() then
@@ -13,6 +25,15 @@ return {
         end,
         "snippet_forward",
         "fallback",
+      },
+    },
+
+    completion = {
+      menu = {
+        auto_show = true,
+      },
+      ghost_text = {
+        enabled = false, -- IMPORTANT: Copilot handles ghost text, not blink
       },
     },
   },
