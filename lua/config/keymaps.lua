@@ -167,7 +167,7 @@ require("config.tooling")
 
 --------------- Copilot -------------------------------------
 -- accept ghost text with alt-r
-vim.keymap.set({ "i" }, "<M-r>", function()
+vim.keymap.set({ "i", "n" }, "<M-r>", function()
   local copilot = require("copilot.suggestion")
   if copilot.is_visible() then
     copilot.accept()
@@ -265,3 +265,7 @@ vim.schedule(function()
   pcall(vim.keymap.del, "n", "<leader>r")
   pcall(vim.keymap.del, "n", "<localleader>r")
 end)
+
+-- proper exit
+vim.keymap.set({ "i", "v" }, "<C-c>", "<Esc>", { desc = "Exit insert mode" })
+require("config.after_lazy")

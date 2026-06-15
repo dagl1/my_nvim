@@ -32,6 +32,25 @@ return {
       opts.picker.sources.explorer.hidden = true
       -- Set snacks picker for recent files to close using escape
 
+      -------------------------------------------------------
+      -- Notifications settings
+      -------------------------------------------------------
+      opts.picker.sources.notifications = opts.picker.sources.notifications or {}
+      opts.picker.sources.notifications.win = opts.picker.sources.notifications.win or {}
+      opts.picker.sources.notifications.win.list = opts.picker.sources.notifications.win.list or {}
+      opts.picker.sources.notifications.win.input = opts.picker.sources.notifications.win.input or {}
+      opts.picker.sources.notifications.win.list.keys = (opts.picker.sources.notifications.win.list.keys or {})
+      opts.picker.sources.notifications.win.list.keys["<Esc>"] = { "close", mode = { "n", "i" } }
+      opts.picker.sources.notifications.win.list.keys["<CR>"] = { "cycle_win", mode = { "n", "i" } }
+      opts.picker.sources.notifications.win.input.keys = opts.picker.sources.notifications.win.input.keys or {}
+      opts.picker.sources.notifications.win.input.keys["<Esc>"] = { "close", mode = { "n", "i" } }
+      opts.picker.sources.notifications.win.input.keys["<CR>"] = { "cycle_win", mode = { "n", "i" } }
+      -- the same for the actual notification window
+      opts.notifier.win = opts.notifier.win or {}
+      opts.notifier.win.list = opts.notifier.win.list or {}
+      opts.notifier.win.list.keys = opts.notifier.win.list.keys or {}
+      opts.notifier.win.list.keys["<Esc>"] = { "close", mode = { "n", "i" } }
+
       ---------------------------------------------------------
       -- CUSTOM TOGGLE SORT BY LAST MODIFIED
       ---------------------------------------------------------
@@ -52,7 +71,16 @@ return {
       end
 
       -- 3. Map the action specifically for the explorer view (Insert & Normal modes)
+
       opts.picker.sources.explorer.win.list.keys["<C-s>"] = { "toggle_sort_modified", mode = { "i", "n" } }
+      opts.picker.sources.explorer.win.list.keys["/"] = {
+        function()
+          local keys = vim.api.nvim_replace_termcodes("/", true, false, true)
+          vim.api.nvim_feedkeys(keys, "n", false)
+        end,
+        mode = { "i", "n" },
+        desc = "Search buffer",
+      }
 
       opts.picker.win = opts.picker.win or {}
       opts.picker.win.preview = opts.picker.win.preview or {}

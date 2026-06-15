@@ -47,3 +47,5 @@ vim.opt.breakindent = true
 vim.opt.textwidth = 94
 -- show a visual indicator at 94 characters
 vim.opt.colorcolumn = "94"
+
+vim.opt.scrolloff = 68

@@ -1,8 +1,27 @@
 return {
+  -- {
+  --   "loctvl842/monokai-pro.nvim",
+  --   lazy = false,
+  --   priority = 1000,
+  --   config = function()
+  --     require("monokai-pro").setup({
+  --       transparent_background = false,
+  --       -- filter = "spectrum",
+  --     })
+  --     vim.cmd.colorscheme("monokai-pro")
+  --   end,
+  -- },
+  {
+    "xiantang/darcula-dark.nvim",
+    dependencies = {
+      "nvim-treesitter/nvim-treesitter",
+    },
+  },
+
   {
     "LazyVim/LazyVim",
     opts = function(_, opts)
-      opts.colorscheme = "tokyonight"
+      opts.colorscheme = "tokyonight-night"
 
       local function transparent()
         local hl = vim.api.nvim_set_hl

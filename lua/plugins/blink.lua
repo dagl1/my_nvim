@@ -28,6 +28,10 @@ return {
       },
     },
 
+    signature = {
+      enabled = false,
+    },
+
     completion = {
       menu = {
         auto_show = true,
