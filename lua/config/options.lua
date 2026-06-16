@@ -49,3 +49,6 @@ vim.opt.textwidth = 94
 vim.opt.colorcolumn = "94"
 
 vim.opt.scrolloff = 68
+
+-- backup
+vim.opt.backupdir = vim.fn.stdpath("data") .. "/backup//"

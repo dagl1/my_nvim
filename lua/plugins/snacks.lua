@@ -18,6 +18,7 @@ return {
       -- explorer settings (safe ones only)
       opts.picker.sources.explorer = opts.picker.sources.explorer or {}
       opts.picker.sources.explorer.hidden = true
+      opts.picker.sources.explorer.follow_file = true
 
       opts.notifier = opts.notifier or {}
       opts.picker = opts.picker or {}
@@ -45,6 +46,7 @@ return {
       opts.picker.sources.notifications.win.input.keys = opts.picker.sources.notifications.win.input.keys or {}
       opts.picker.sources.notifications.win.input.keys["<Esc>"] = { "close", mode = { "n", "i" } }
       opts.picker.sources.notifications.win.input.keys["<CR>"] = { "cycle_win", mode = { "n", "i" } }
+
       -- the same for the actual notification window
       opts.notifier.win = opts.notifier.win or {}
       opts.notifier.win.list = opts.notifier.win.list or {}
@@ -91,6 +93,19 @@ return {
         breakindent = true,
       })
       return opts
+    end,
+    config = function(_, spec_opts)
+      require("snacks").setup(spec_opts)
+      local key = function(msg, title, level)
+        return string.format("msg:%s,title:%s,level:%s", msg, title or "", level or "")
+      end
+      --
+      local notify = Snacks.notifier.notify
+      Snacks.notifier.notify = function(msg, level, opts)
+        opts = opts or {}
+        opts.id = key(msg, opts.title, level)
+        return notify(msg, level, opts)
+      end
     end,
   },
 }

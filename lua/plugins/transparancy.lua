@@ -22,6 +22,7 @@ return {
     "LazyVim/LazyVim",
     opts = function(_, opts)
       opts.colorscheme = "tokyonight-night"
+      -- modify blinkcmpghostext and copilotsuggestion to be dark green
 
       local function transparent()
         local hl = vim.api.nvim_set_hl
@@ -39,7 +40,7 @@ return {
           "StatusLineNC",
           "TabLine",
           "WinSeparator",
-          "CursorLine",
+          -- "CursorLine",
           "CursorLineNr",
           "LineNr",
           ---- TROUBLE ---

@@ -5,6 +5,7 @@
 
 vim.keymap.del("i", "<Tab>")
 vim.keymap.del("i", "<S-Tab>")
+vim.keymap.set("i", "<Tab>", "<Tab>")
 
 -- Indent left and instantly exit visual mode
 vim.keymap.set("v", "<", "<gv<Esc>", { desc = "Indent left and deselect", silent = true })

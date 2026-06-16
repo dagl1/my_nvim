@@ -1,0 +1,23 @@
+return {}
+-- return {
+--   "folke/todo-comments.nvim",
+--   dependencies = { "nvim-lua/plenary.nvim" },
+--   opts = {
+--     signs = true, -- show icons in the signs column
+--     keywords = {
+--       TODO = { icon = " ", color = "info" },
+--       FIXME = { icon = "🪲", color = "error", alt = { "FIX", "BUG" } },
+--       NOTE = { icon = "📝", color = "hint" },
+--     },
+--     highlight = {
+--       multiline = true, -- enable multiline todo comments
+--       bg = "fg", -- "fg", "bg", or "empty" (how to highlight the text)
+--     },
+--     colors = {
+--       error = { "DiagnosticError", "ErrorMsg", "#DC2626" },
+--       warning = { "DiagnosticWarn", "WarningMsg", "#FBBF24" },
+--       info = { "DiagnosticInfo", "#2563EB" },
+--       hint = { "DiagnosticHint", "#10B981" },
+--     },
+--   },
+-- }
