@@ -5,7 +5,7 @@ return {
       opts.notifier = opts.notifier or {}
 
       -- notifications
-      opts.notifier.timeout = 1000
+      opts.notifier.timeout = 2000
       opts.notifier.enabled = true
 
       -- ONLY safe global picker options

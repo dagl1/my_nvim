@@ -52,7 +52,7 @@ vim.keymap.set({ "n" }, "<leader>fr", function()
 end, { desc = "Recent (cwd)" })
 
 -- Ctrl+/ toggle comment (normal + visual)
-vim.keymap.set("n", "<C-_>", function()
+vim.keymap.set({ "n", "i" }, "<C-_>", function()
   require("Comment.api").toggle.linewise.current()
 end, { silent = true })
 

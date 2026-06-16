@@ -3,6 +3,13 @@
 -- Add any additional options here
 
 -- Leader keys
+colors = {
+  regular_color = { fg = "#C9D1D9" }, -- brighter gray (was #A9B7C6)
+}
+vim.api.nvim_set_hl(0, "Normal", colors.regular_color)
+vim.api.nvim_set_hl(0, "NormalFloat", colors.regular_color)
+vim.cmd("highlight clear")
+vim.cmd("syntax reset")
 vim.g.mapleader = ","
 vim.g.maplocalleader = ","
 
