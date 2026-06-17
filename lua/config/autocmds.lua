@@ -77,3 +77,15 @@ vim.api.nvim_create_autocmd("User", {
     end, 100) -- 100ms delay prevents UI layout race conditions
   end,
 })
+-------- give snacks notification history also highlights
+---vim.api.nvim_create_autocmd("FileType", {
+---  pattern = "markdown.snacks_picker_preview",
+---  callback = function(ev)
+---    local ns = vim.api.nvim_create_namespace("snacks_clone")
+---
+---    vim.api.nvim_buf_set_extmark(ev.buf, ns, 0, 0, {
+---      virt_text = { { "●", "SnacksNotifierInfo" } },
+---      virt_text_pos = "eol",
+---    })
+---  end,
+---})

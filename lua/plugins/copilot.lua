@@ -40,13 +40,22 @@ return {
 
     opts = {
       context = "buffers",
+      trusted_tools = true,
       chat_autocomplete = false,
-      sticky = "#buffer:active ",
       auto_insert_mode = true,
       mappings = {
         close = {
-          normal = "",
-          insert = "",
+          normal = "[][]",
+          insert = "[][]",
+        },
+        complete = {
+          insert = "<C-g>",
+        },
+        -- diff view not on gd but on
+        -- c-j
+        show_diff = {
+          normal = "<C-j>",
+          insert = "<C-j>",
         },
       },
     },

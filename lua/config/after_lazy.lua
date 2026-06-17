@@ -104,11 +104,11 @@ set(0, "@constant.python", colors.regular_color)
 
 -- Comments
 set(0, "@comment", colors.comment_color)
+set(0, "DiagnosticUnnecessary", colors.comment_color)
 
 -- BUILTINS (dark blue)
 set(0, "@function.builtin.python", colors.built_in_blue)
 set(0, "@lsp.type.builtin.python", colors.built_in_blue)
-set(0, "@constant.builtin.python", colors.dark_orange)
 
 -- method definition/declaration
 set(0, "@lsp.typemod.method.definition", colors.method_declaration)
@@ -142,6 +142,8 @@ set(0, "@keyword.exception.python", colors.dark_orange)
 set(0, "@punctuation.comma.python", colors.dark_orange)
 set(0, "@punctuation.semicomma.python", colors.dark_orange)
 set(0, "@punctuation.special.python", colors.dark_orange)
+set(0, "@constant.builtin.python", colors.dark_orange)
+set(0, "@string.escape", colors.dark_orange)
 
 -- Self parameter (purple)
 set(0, "@lsp.type.selfParameter.python", colors.self_purple)

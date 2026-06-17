@@ -3,9 +3,10 @@
 -- Add any additional keymaps here
 --
 
-vim.keymap.del("i", "<Tab>")
+------------------- Autocomplete suggestion (non-copilot) ----------------------
+--- Super tab is set in ~/git/my_nvim/lua/plugins/blink.lua - vim.keymap.del("i", "<Tab>")
 vim.keymap.del("i", "<S-Tab>")
-vim.keymap.set("i", "<Tab>", "<Tab>")
+-------------------------------------------------------
 
 -- Indent left and instantly exit visual mode
 vim.keymap.set("v", "<", "<gv<Esc>", { desc = "Indent left and deselect", silent = true })
@@ -267,6 +268,19 @@ vim.schedule(function()
   pcall(vim.keymap.del, "n", "<localleader>r")
 end)
 
+------------------ buffer line /tabs ----------------------
+-- move next ctrl 7 ( `]` actually)
+-- move previous with ctrl 4 ( `[`)
+vim.keymap.set("n", "<C-É>", ":BufferLineCyclePrev<CR>", { desc = "Next buffer" })
+vim.keymap.set("n", "<C-Ê>", ":BufferLineCycleNext<CR>", { desc = "Previous buffer" })
+
+----- buffer undo
+require("buffer-reopen").setup({})
+-- is ctrl + t
+vim.keymap.set("n", "", ":BufferHistory reopen<CR>", { desc = "Reopen closed buffer" })
+----------------------------------------------------
+
 -- proper exit
 vim.keymap.set({ "i", "v" }, "<C-c>", "<Esc>", { desc = "Exit insert mode" })
+
 require("config.after_lazy")

@@ -19,9 +19,16 @@ return {
         function(cmp)
           if cmp.snippet_active() then
             return cmp.accept()
-          else
+          elseif cmp.is_visible() then
             return cmp.select_and_accept()
+          else
+            return "\t"
           end
+
+          --   if else
+          --     print("snippet not active")
+          --     return cmp.select_and_accept()
+          --   end
         end,
         "snippet_forward",
         "fallback",

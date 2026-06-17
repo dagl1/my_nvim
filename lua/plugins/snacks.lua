@@ -41,17 +41,10 @@ return {
       opts.picker.sources.notifications.win.list = opts.picker.sources.notifications.win.list or {}
       opts.picker.sources.notifications.win.input = opts.picker.sources.notifications.win.input or {}
       opts.picker.sources.notifications.win.list.keys = (opts.picker.sources.notifications.win.list.keys or {})
-      opts.picker.sources.notifications.win.list.keys["<Esc>"] = { "close", mode = { "n", "i" } }
-      opts.picker.sources.notifications.win.list.keys["<CR>"] = { "cycle_win", mode = { "n", "i" } }
+      opts.picker.sources.notifications.win.list.keys["<CR>"] = { "focus_preview", mode = { "n", "i" } }
       opts.picker.sources.notifications.win.input.keys = opts.picker.sources.notifications.win.input.keys or {}
       opts.picker.sources.notifications.win.input.keys["<Esc>"] = { "close", mode = { "n", "i" } }
-      opts.picker.sources.notifications.win.input.keys["<CR>"] = { "cycle_win", mode = { "n", "i" } }
-
-      -- the same for the actual notification window
-      opts.notifier.win = opts.notifier.win or {}
-      opts.notifier.win.list = opts.notifier.win.list or {}
-      opts.notifier.win.list.keys = opts.notifier.win.list.keys or {}
-      opts.notifier.win.list.keys["<Esc>"] = { "close", mode = { "n", "i" } }
+      opts.picker.sources.notifications.win.input.keys["<CR>"] = { "focus_preview", mode = { "n", "i" } }
 
       ---------------------------------------------------------
       -- CUSTOM TOGGLE SORT BY LAST MODIFIED
@@ -73,7 +66,6 @@ return {
       end
 
       -- 3. Map the action specifically for the explorer view (Insert & Normal modes)
-
       opts.picker.sources.explorer.win.list.keys["<C-s>"] = { "toggle_sort_modified", mode = { "i", "n" } }
       opts.picker.sources.explorer.win.list.keys["/"] = {
         function()
@@ -94,6 +86,7 @@ return {
       })
       return opts
     end,
+
     config = function(_, spec_opts)
       require("snacks").setup(spec_opts)
       local key = function(msg, title, level)
@@ -105,6 +98,22 @@ return {
         opts = opts or {}
         opts.id = key(msg, opts.title, level)
         return notify(msg, level, opts)
+      end
+      local orig_focus = Snacks.picker.actions.focus_preview
+
+      Snacks.picker.actions.focus_preview = function(_, items, picker)
+        local item = items["item"]
+        local is_error = item and (item.level == vim.log.levels.ERROR or item.level == "error")
+
+        -- run original action first
+        local ok = pcall(orig_focus, _, items, picker)
+
+        -- post-action adjustment
+        if ok and is_error then
+          vim.schedule(function()
+            vim.cmd("normal! 2j")
+          end)
+        end
       end
     end,
   },
