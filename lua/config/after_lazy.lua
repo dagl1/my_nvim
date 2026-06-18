@@ -127,6 +127,7 @@ set(0, "@string.documentation", colors.text_green)
 set(0, "@decorator", colors.yellow)
 set(0, "@lsp.type.decorator.python", colors.yellow)
 set(0, "@punctuation.delimiter.at", colors.yellow)
+set(0, "@attribute.python", colors.yellow)
 
 -- KEYWORDS (orange)
 set(0, "@keyword", colors.dark_orange)

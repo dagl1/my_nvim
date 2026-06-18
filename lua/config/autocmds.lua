@@ -89,3 +89,32 @@ vim.api.nvim_create_autocmd("User", {
 ---    })
 ---  end,
 ---})
+vim.api.nvim_create_autocmd("FileType", {
+  pattern = "python",
+  callback = function(ev)
+    vim.keymap.set("n", "]m", function()
+      local cur = vim.api.nvim_win_get_cursor(0)
+
+      -- move one line down first so we don't re-match current position
+      vim.api.nvim_win_set_cursor(0, { cur[1] + 1, 0 })
+
+      vim.fn.search("\\v^\\s*(class|def|async def)", "W")
+
+      vim.cmd("normal! zz")
+      vim.cmd("normal! W")
+      vim.cmd("normal! W")
+    end, { buffer = ev.buf })
+
+    vim.keymap.set("n", "[m", function()
+      local cur = vim.api.nvim_win_get_cursor(0)
+
+      vim.api.nvim_win_set_cursor(0, { math.max(cur[1] - 1, 1), 0 })
+
+      vim.fn.search("\\v^\\s*(class|def|async def)", "bW")
+
+      vim.cmd("normal! zz")
+      vim.cmd("normal! W")
+      vim.cmd("normal! W")
+    end, { buffer = ev.buf })
+  end,
+})

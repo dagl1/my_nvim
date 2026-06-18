@@ -34,6 +34,11 @@ vim.keymap.set("n", "<C-CR>", function()
   vim.api.nvim_win_set_cursor(0, { row + 1, #indent })
 end, { silent = true })
 
+----------------- Buffer navigation --------------
+-- Helper function to jump and conditionally move forward one word
+-- in ~/git/my_nvim/lua/config/autocmds.lua
+------------------------------------------------------
+
 -- File navigation
 local picker_opts_global = {
   win = {

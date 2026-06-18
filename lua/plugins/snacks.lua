@@ -24,6 +24,10 @@ return {
       opts.picker = opts.picker or {}
       opts.picker.sources = opts.picker.sources or {}
       opts.picker.sources.explorer = opts.picker.sources.explorer or {}
+      opts.picker.sources.explorer.layout = opts.picker.sources.explorer.layout or {}
+      opts.picker.sources.explorer.layout.layout = {
+        width = 24,
+      }
       opts.picker.sources.explorer.win = opts.picker.sources.explorer.win or {}
       opts.picker.sources.explorer.win.list = opts.picker.sources.explorer.win.list or {}
       opts.picker.sources.explorer.win.list.keys = opts.picker.sources.explorer.win.list.keys or {}
