@@ -5,6 +5,8 @@ return {
     signs = true, -- show icons in the signs column
     keywords = {
       TODO = { icon = " ", color = "info" },
+      todo = { icon = " ", color = "info" },
+      Todo = { icon = " ", color = "info" },
       FIXME = { icon = "🪲", color = "error", alt = { "FIX", "BUG" } },
       NOTE = { icon = "📝", color = "hint" },
     },

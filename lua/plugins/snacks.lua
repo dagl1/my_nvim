@@ -35,6 +35,7 @@ return {
       -- disable Esc safely
       opts.picker.sources.explorer.win.list.keys["<Esc>"] = false
       opts.picker.sources.explorer.hidden = true
+      opts.picker.sources.explorer.ignore = true
       -- Set snacks picker for recent files to close using escape
 
       -------------------------------------------------------
