@@ -31,6 +31,11 @@ return {
       opts.picker.sources.explorer.win = opts.picker.sources.explorer.win or {}
       opts.picker.sources.explorer.win.list = opts.picker.sources.explorer.win.list or {}
       opts.picker.sources.explorer.win.list.keys = opts.picker.sources.explorer.win.list.keys or {}
+      -- add to lsp_references
+      opts.picker.lsp_references = opts.picker.lsp_references or {}
+      opts.picker.lsp_references.sort = opts.picker.lsp_references.sort or {}
+      opts.picker.lsp_config = opts.picker.lsp_config or {}
+      opts.picker.lsp_config.sort = opts.picker.lsp_config.sort or {}
 
       -- disable Esc safely
       opts.picker.sources.explorer.win.list.keys["<Esc>"] = false

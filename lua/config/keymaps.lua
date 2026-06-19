@@ -288,4 +288,15 @@ vim.keymap.set("n", "", ":BufferHistory reopen<CR>", { desc = "Reopen closed bu
 -- proper exit
 vim.keymap.set({ "i", "v" }, "<C-c>", "<Esc>", { desc = "Exit insert mode" })
 
+-- Json format
+vim.keymap.set("n", "<leader>jf", function()
+  vim.cmd("%!jq .")
+end, { desc = "Format JSON" })
+
+-- snacks.picker.lsp_references() is a better version of vim.lsp.buf.references() that uses Snacks picker
+-- lsp search references
+-- vim.keymap.set("n", "gd", function()
+--   sn
+-- end, { desc = "LSP references" })
+
 require("config.after_lazy")
