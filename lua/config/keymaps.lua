@@ -101,7 +101,7 @@ end)
 vim.keymap.set("x", "y", function()
   vim.cmd.normal({ args = { "y" }, bang = true })
   if visual_state.viw_start then
-    vim.api.nvim_win_set_cursor(0, visual_state.viw_start)
+    pcall(vim.api.nvim_win_set_cursor, 0, visual_state.viw_start)
     visual_state.viw_start = nil
     visual_state.mode = nil
     return

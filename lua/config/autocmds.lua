@@ -24,14 +24,6 @@ vim.api.nvim_create_autocmd("VimEnter", {
   end,
 })
 vim.api.nvim_create_autocmd("FileType", {
-  pattern = "trouble",
-  callback = function()
-    vim.schedule(function()
-      vim.api.nvim_win_set_option(0, "winhighlight", "")
-    end)
-  end,
-})
-vim.api.nvim_create_autocmd("FileType", {
   pattern = "toggleterm",
   callback = function(args)
     vim.b.miniai_disable = true
@@ -102,7 +94,7 @@ vim.api.nvim_create_autocmd("FileType", {
 
       vim.cmd("normal! zz")
       vim.cmd("normal! W")
-      vim.cmd("normal! W")
+      vim.cmd("normal! e")
     end, { buffer = ev.buf })
 
     vim.keymap.set("n", "[m", function()
@@ -114,7 +106,51 @@ vim.api.nvim_create_autocmd("FileType", {
 
       vim.cmd("normal! zz")
       vim.cmd("normal! W")
-      vim.cmd("normal! W")
+      vim.cmd("normal! e")
     end, { buffer = ev.buf })
+  end,
+})
+
+vim.api.nvim_create_autocmd("FileType", {
+  pattern = "trouble",
+
+  callback = function(args)
+    -- vim.wo.wrap = true
+    vim.schedule(function()
+      -- Grab the windows displaying the trouble buffer safely
+      local wins = vim.fn.win_findbuf(args.buf)
+      for _, win in ipairs(wins) do
+        if vim.api.nvim_win_is_valid(win) then
+          vim.api.nvim_win_set_option(win, "wrap", true)
+          vim.api.nvim_win_set_option(win, "linebreak", true)
+        end
+      end
+    end)
+    -- vim.wo.linebreak = true -- Prevents breaking words in half
+    -- vim.opt_local.wrap = true
+    -- vim.schedule(function()
+    --   vim.api.nvim_win_set_option(0, "winhighlight", "")
+    -- end)
+  end,
+})
+
+vim.api.nvim_create_autocmd("BufWritePre", {
+  group = ruff_string_wrap_group,
+  pattern = "*.py",
+  callback = function()
+    -- 1. Find single or double-quoted lines exceeding 88 characters (excluding docstrings)
+    -- This specific Vim regex splits long string literals by injecting a backslash-break
+    -- and wrapping them cleanly.
+    local save_cursor = vim.fn.getpos(".")
+
+    -- Command finds strings longer than 88 chars and inserts structural line breaks
+    vim.cmd([[silent! g/\v^[^#]*['"]([^'"]){88,}/s/\v([^'"]{60,}\s)/&\n/g]])
+
+    -- 2. Restore cursor location so your view doesn't jump
+    vim.fn.setpos(".", save_cursor)
+
+    -- 3. Trigger your standard LSP formatting/fixing
+    -- (This gives the broken strings back to Ruff to add neat parentheses and alignment)
+    vim.lsp.buf.format({ async = false })
   end,
 })

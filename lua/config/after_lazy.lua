@@ -81,6 +81,8 @@ set(0, "@constructor.python", {})
 set(0, "@lsp.type.string.python", {})
 set(0, "@lsp.mod.documentation.python", {})
 set(0, "@lsp.typemod.string.documentation.python", {})
+set(0, "@lsp.typemod.method.definition.python", {})
+
 -- FUNCTION CALLS (NO COLOR)
 set(0, "@function.call", colors.regular_color)
 set(0, "@variable.member", colors.regular_color)

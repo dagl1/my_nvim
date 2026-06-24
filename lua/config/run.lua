@@ -14,7 +14,8 @@ end
 
 M.configs = {
   dev = {
-    source_dir = vim.fn.getcwd(),
+    base_dir = vim.fn.getcwd(),
+    source = "src",
     file = "main.py",
     venv = ".venv",
     args = "",
@@ -24,8 +25,8 @@ M.configs = {
 
 M.active = "dev"
 
-local function resolve_python(venv, source_dir)
-  local path = source_dir .. "/" .. venv .. "/bin/python"
+local function resolve_python(venv, base_dir)
+  local path = base_dir .. "/" .. venv .. "/bin/python"
   if vim.fn.executable(path) == 1 then
     return path
   end
@@ -43,20 +44,25 @@ function M.run()
     return
   end
 
-  local source_dir = cfg.source_dir or vim.fn.getcwd()
+  local base_dir = cfg.base_dir or vim.fn.getcwd()
+  local source = cfg.source_dir or ""
   local venv = cfg.venv or ".venv"
-  local python = resolve_python(venv, source_dir)
-  local file = source_dir .. "/" .. cfg.file
+  local python = resolve_python(venv, base_dir)
+  local file = base_dir .. "/" .. cfg.file
   local module = cfg.module or ""
   local args = cfg.args or ""
 
   local cmd
 
   if cfg.use_module then
+    if source ~= "" then
+      source = "PYTHONPATH=" .. source
+    end
     cmd = table.concat({
       "cd",
-      source_dir,
+      base_dir,
       "&&",
+      source,
       "uv run",
       "-m",
       module,
@@ -168,44 +174,53 @@ function M.prompt_add()
       return
     end
 
-    vim.ui.input({ prompt = "Use module : " }, function(use_module)
-      vim.ui.input({ prompt = "Source_dir : " }, function(source_dir)
-        if not source_dir or source_dir == "" then
+    vim.ui.input({ prompt = "Use module : ", default = "true" }, function(use_module)
+      vim.ui.input({ prompt = "Base_dir : ", default = vim.fn.getcwd() }, function(base_dir)
+        if not base_dir or base_dir == "" then
           return
         end
 
-        vim.ui.input({ prompt = "File: " }, function(file)
-          if not file then
+        vim.ui.input({ prompt = "source_dir : ", default = vim.fn.getcwd() }, function(source_dir)
+          if not source_dir or source_dir == "" then
             return
           end
-          vim.ui.input({ prompt = "Args: " }, function(args)
-            if not args then
+          -- default for file is buffer name
+          vim.ui.input({ prompt = "File: ", default = vim.fn.expand("%:p") }, function(file)
+            if not file then
               return
             end
-
-            vim.ui.input({ prompt = "Venv (.venv): ", default = ".venv" }, function(venv)
-              if use_module then
-                M.configs[name] = {
-                  use_module = use_module,
-                  source_dir = source_dir,
-                  module = file,
-                  file = "",
-                  venv = venv,
-                  args = args,
-                }
-              else
-                M.configs[name] = {
-                  use_module = use_module,
-                  source_dir = source_dir,
-                  module = "",
-                  file = file,
-
-                  venv = venv,
-                  args = args,
-                }
+            vim.ui.input({ prompt = "Args: " }, function(args)
+              if not args then
+                return
               end
 
-              vim.notify("Added config: " .. name)
+              vim.ui.input({ prompt = "Venv (.venv): ", default = ".venv" }, function(venv)
+                if use_module then
+                  M.configs[name] = {
+                    use_module = use_module,
+                    base_dir = base_dir,
+                    source_dir = source_dir,
+                    module = file,
+                    file = "",
+                    venv = venv,
+                    args = args,
+                  }
+                else
+                  M.configs[name] = {
+                    use_module = use_module,
+                    base_dir = base_dir,
+                    source_dir = "",
+                    module = "",
+                    file = file,
+
+                    venv = venv,
+                    args = args,
+                  }
+                end
+
+                M.save()
+                vim.notify("Added config: " .. name)
+              end)
             end)
           end)
         end)
@@ -234,47 +249,57 @@ function M.edit(name)
     return
   end
 
-  vim.ui.input({ prompt = "Use module : " }, function(use_module)
+  vim.ui.input({ prompt = "Use module : ", default = tostring(cfg.use_module) }, function(use_module)
     use_module = to_bool(use_module)
-    vim.ui.input({ prompt = "source_dir:", default = cfg.source_dir }, function(source_dir)
-      if not source_dir then
+
+    vim.ui.input({ prompt = "Base_dir", default = cfg.base_dir }, function(base_dir)
+      if not base_dir then
         return
       end
-      vim.ui.input({ prompt = "File:", default = cfg.file }, function(file)
-        if not file then
+      vim.ui.input({ prompt = "source_dir:", default = cfg.source_dir }, function(source_dir)
+        if not source_dir then
           return
         end
-
-        vim.ui.input({ prompt = "Venv:", default = cfg.venv or ".venv" }, function(venv)
-          if not venv then
+        local default_file = use_module and (cfg.module or "") or (cfg.file or "")
+        vim.ui.input({ prompt = "File/module:", default = default_file }, function(file)
+          if not file then
             return
           end
 
-          vim.ui.input({ prompt = "Args:", default = cfg.args or "" }, function(args)
-            if args == nil then
+          vim.ui.input({ prompt = "Venv:", default = cfg.venv or ".venv" }, function(venv)
+            if not venv then
               return
             end
 
-            if use_module then
-              M.configs[name] = {
-                use_module = use_module,
-                source_dir = source_dir,
-                module = file,
-                file = "",
-                venv = venv,
-                args = args,
-              }
-            else
-              M.configs[name] = {
-                use_module = use_module,
-                source_dir = source_dir,
-                file = file,
-                venv = venv,
-                args = args,
-              }
-            end
+            vim.ui.input({ prompt = "Args:", default = cfg.args or "" }, function(args)
+              if args == nil then
+                return
+              end
 
-            vim.notify("Updated config: " .. name)
+              if use_module then
+                M.configs[name] = {
+                  use_module = use_module,
+                  base_dir = base_dir,
+                  source_dir = source_dir,
+                  module = file,
+                  file = "",
+                  venv = venv,
+                  args = args,
+                }
+              else
+                M.configs[name] = {
+                  use_module = use_module,
+                  base_dir = base_dir,
+                  source_dir = "",
+                  file = file,
+                  venv = venv,
+                  args = args,
+                }
+              end
+
+              M.save()
+              vim.notify("Updated config: " .. name)
+            end)
           end)
         end)
       end)

@@ -57,5 +57,6 @@ vim.opt.colorcolumn = "94"
 
 vim.opt.scrolloff = 68
 
+vim.opt_local.formatoptions = "tcrq"
 -- backup
 vim.opt.backupdir = vim.fn.stdpath("data") .. "/backup//"
