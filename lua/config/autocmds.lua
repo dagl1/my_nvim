@@ -111,28 +111,28 @@ vim.api.nvim_create_autocmd("FileType", {
   end,
 })
 
-vim.api.nvim_create_autocmd("FileType", {
-  pattern = "trouble",
-
-  callback = function(args)
-    -- vim.wo.wrap = true
-    vim.schedule(function()
-      -- Grab the windows displaying the trouble buffer safely
-      local wins = vim.fn.win_findbuf(args.buf)
-      for _, win in ipairs(wins) do
-        if vim.api.nvim_win_is_valid(win) then
-          vim.api.nvim_win_set_option(win, "wrap", true)
-          vim.api.nvim_win_set_option(win, "linebreak", true)
-        end
-      end
-    end)
-    -- vim.wo.linebreak = true -- Prevents breaking words in half
-    -- vim.opt_local.wrap = true
-    -- vim.schedule(function()
-    --   vim.api.nvim_win_set_option(0, "winhighlight", "")
-    -- end)
-  end,
-})
+-- vim.api.nvim_create_autocmd("FileType", {
+--   pattern = "trouble",
+--
+--   callback = function(args)
+--     -- vim.wo.wrap = true
+--     vim.schedule(function()
+--       -- Grab the windows displaying the trouble buffer safely
+--       local wins = vim.fn.win_findbuf(args.buf)
+--       for _, win in ipairs(wins) do
+--         if vim.api.nvim_win_is_valid(win) then
+--           vim.api.nvim_win_set_option(win, "wrap", true)
+--           vim.api.nvim_win_set_option(win, "linebreak", true)
+--         end
+--       end
+--     end)
+--     -- vim.wo.linebreak = true -- Prevents breaking words in half
+--     -- vim.opt_local.wrap = true
+--     -- vim.schedule(function()
+--     --   vim.api.nvim_win_set_option(0, "winhighlight", "")
+--     -- end)
+--   end,
+-- })
 
 vim.api.nvim_create_autocmd("BufWritePre", {
   group = ruff_string_wrap_group,
@@ -153,4 +153,137 @@ vim.api.nvim_create_autocmd("BufWritePre", {
     -- (This gives the broken strings back to Ruff to add neat parentheses and alignment)
     vim.lsp.buf.format({ async = false })
   end,
+})
+
+local sniprun_md_group = vim.api.nvim_create_augroup("SniprunMarkdown", { clear = true })
+local sniprun_buf = nil
+local sniprun_terminal_win = nil
+local left_markdown = false
+--todo: add q to close terminal when leaving markdown buffer
+vim.api.nvim_create_autocmd("BufEnter", {
+  group = sniprun_md_group,
+  callback = function()
+    if not left_markdown then
+      left_markdown = false
+      return
+    end
+
+    local buf = vim.api.nvim_win_get_buf(0)
+
+    local ft = vim.api.nvim_get_option_value("filetype", { buf = buf })
+
+    print("ft", ft)
+    if ft == "markdown" then
+      return
+    end
+
+    if ft:match("^snacks_picker") then
+      return
+    end
+
+    local ok = pcall(function()
+      return vim.b[buf].sniprun_terminal
+    end)
+
+    if ok and vim.b[buf].sniprun_terminal then
+      return
+    end
+
+    if sniprun_terminal_win and vim.api.nvim_win_is_valid(sniprun_terminal_win) then
+      vim.api.nvim_win_close(sniprun_terminal_win, true)
+    end
+  end,
+})
+vim.api.nvim_create_autocmd("BufLeave", {
+  pattern = "*",
+  group = sniprun_md_group,
+  callback = function(args)
+    local left_buf_ft = vim.api.nvim_get_option_value("filetype", { buf = args.buf })
+
+    if left_buf_ft == "markdown" then
+      left_markdown = true
+    end
+  end,
+})
+
+vim.api.nvim_create_autocmd("FileType", {
+  pattern = "markdown",
+  group = sniprun_md_group,
+  callback = function()
+    vim.keymap.set("n", "<leader>rb", function()
+      local current_win = vim.api.nvim_get_current_win()
+      local cursor_pos = vim.api.nvim_win_get_cursor(current_win)
+      local current_line = cursor_pos[1]
+      local last_line = vim.api.nvim_buf_line_count(0)
+
+      local start_line = nil
+      local end_line = nil
+
+      for i = current_line, 1, -1 do
+        local line = vim.api.nvim_buf_get_lines(0, i - 1, i, false)[1] or ""
+        if line:match("^```") then
+          start_line = i
+          break
+        end
+      end
+
+      for i = current_line, last_line do
+        local line = vim.api.nvim_buf_get_lines(0, i - 1, i, false)[1] or ""
+        end_line = i
+        if line:match("^```") and i ~= start_line then
+          break
+        end
+      end
+
+      if start_line and end_line then
+        vim.api.nvim_win_set_cursor(current_win, { start_line, 0 })
+        local keys = string.format("V%dG<leader>rb", end_line)
+        local escape_keys = vim.api.nvim_replace_termcodes(keys, true, true, true)
+
+        vim.api.nvim_feedkeys(escape_keys, "m", false)
+      else
+        vim.notify("Not inside codeblock", vim.log.levels.WARN)
+      end
+      vim.defer_fn(function()
+        for _, win in ipairs(vim.api.nvim_list_wins()) do
+          local buf = vim.api.nvim_win_get_buf(win)
+
+          if vim.api.nvim_get_option_value("buftype", { buf = buf }) == "terminal" then
+            sniprun_terminal_buf = buf
+            sniprun_terminal_win = win
+
+            vim.b[buf].sniprun_terminal = true
+            break
+          end
+        end
+      end, 100)
+
+      vim.defer_fn(function()
+        if vim.api.nvim_win_is_valid(current_win) then
+          vim.api.nvim_win_set_cursor(current_win, cursor_pos)
+        end
+      end, 100)
+    end, { buffer = true, silent = true, desc = "Trigger visuele codeblock SnipRun" })
+  end,
+})
+
+vim.keymap.set("n", "<leader>rt", function()
+  if not sniprun_terminal_buf then
+    vim.notify("No SnipRun terminal")
+    return
+  end
+
+  if sniprun_terminal_win and vim.api.nvim_win_is_valid(sniprun_terminal_win) then
+    vim.api.nvim_set_current_win(sniprun_terminal_win)
+    return
+  end
+
+  vim.cmd("botright split")
+  vim.api.nvim_win_set_buf(0, sniprun_terminal_buf)
+  sniprun_terminal_win = vim.api.nvim_get_current_win()
+end)
+vim.keymap.set("n", "q", function()
+  vim.api.nvim_win_close(0, true)
+end, {
+  buffer = sniprun_buf,
 })

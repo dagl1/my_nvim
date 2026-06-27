@@ -3,8 +3,14 @@ return {
     "folke/trouble.nvim",
     opts = {
       win = {
-        size = 20, -- 👈 height for bottom layout (or width if vertical)
-        winhighlight = "",
+        type = "split",
+        relative = "win",
+        position = "right",
+        size = 0.36,
+        wo = {
+          wrap = true,
+          linebreak = true,
+        },
       },
     },
   },

@@ -48,6 +48,10 @@ return {
           normal = "[][]",
           insert = "[][]",
         },
+        reset = {
+          normal = "<m-o>",
+          insert = "<m-o>",
+        },
         complete = {
           insert = "<C-g>",
         },

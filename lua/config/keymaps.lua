@@ -285,8 +285,20 @@ require("buffer-reopen").setup({})
 vim.keymap.set("n", "", ":BufferHistory reopen<CR>", { desc = "Reopen closed buffer" })
 ----------------------------------------------------
 
+-- SnipRun
+vim.api.nvim_set_keymap("v", "<leader>rb", "<Plug>SnipRun", { silent = true })
+-- see ~/git/my_nvim/lua/config/autocmds.lua for visual codeblock sniprun
+
 -- proper exit
 vim.keymap.set({ "i", "v" }, "<C-c>", "<Esc>", { desc = "Exit insert mode" })
+
+-- Trouble
+-- vim.keymap.set(
+--   "n",
+--   "<leader>xx",
+--   "<cmd>Trouble diagnostics toggle win.type=split win.position=right win.size=0.8<cr>",
+--   { desc = "Toggle Trouble" }
+-- )
 
 -- Json format
 vim.keymap.set("n", "<leader>jf", function()

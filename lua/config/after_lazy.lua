@@ -39,31 +39,6 @@ local colors = {
   keyword_color = { fg = "#D16A4A" }, -- stronger keyword contrast
   tag_color = { fg = "#B07A4A" }, -- slightly brighter brown-orange
 }
--- local colors = {
---   -- regular color = gray
---   regular_color = { fg = "#A9B7C6" },
---   -- regular_color = { fg = "#FFF999" },
---   text_green = { fg = "#629755" },
---   string_green = { fg = "#6A8759" },
---   dark_orange = { fg = "#CC7832" },
---   yellow = { fg = "#BBB529" },
---   number_blue = { fg = "#6897BB" },
---   built_in_blue = { fg = "#8888C6" },
---   invalid_escape_effect_orange = {
---     fg = "#CC7832",
---     bg = "none",
---     special = "#",
---     sp = "#CC7832",
---     undercurl = true,
---   },
---   method_declaration = { fg = "#FFC66D" },
---   self_purple = { fg = "#94668d" },
---   magic_method_purple = { fg = "#B200B2" },
---   constant_color = { fg = "#9876AA" },
---   keyword_color = { fg = "#AA4926" },
---   tag_color = { fg = "#8A653B" },
--- }
--- set all colors to regular first, then override specific ones, so that if there are any missing highlights, they will at least be the regular color instead of default
 
 ----------------- IMPORTANT------------------------
 -- Contains additional treesitter logic in ~/git/my_nvim/after/queries/python/highlights.scm
