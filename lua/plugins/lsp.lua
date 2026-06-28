@@ -1,10 +1,39 @@
-vim.g.lazyvim_python_lsp = "ty"
+vim.g.lazyvim_python_lsp = { "ty" }
+
 return {
   {
     "neovim/nvim-lspconfig",
     opts = {
+      inlay_hints = { enabled = true },
+
       servers = {
+        ruff = {
+          on_attach = function(client)
+            client.server_capabilities.hoverProvider = false
+          end,
+          init_options = {
+            settings = {
+              lint = {
+                select = { "F401" },
+              },
+            },
+          },
+        },
+
+        ["cspell_ls"] = {
+          filetypes = { "python", "markdown" },
+        },
+
+        ["harper_ls"] = {
+          filetypes = vim.tbl_filter(function(ft)
+            return ft ~= "python"
+          end, vim.lsp.get_supported_filetypes or {}),
+        },
+
+        -- Pyright uitschakelen
         pyright = { enabled = false, autosetup = false },
+
+        -- Ty configuratie
         ty = {
           settings = {
             ty = {
@@ -16,10 +45,11 @@ return {
             },
           },
         },
+
+        -- Custom Snacks Picker shortcuts voor LSP References
         ["*"] = {
           keys = {
             { "gd", false },
-
             {
               "gd",
               function()
@@ -27,39 +57,26 @@ return {
                   transform = function(item)
                     local line = item.line or ""
                     local file = item.file or ""
-
                     local bonus = 0
 
-                    -- imports = low priority
                     if line:match("^%s*from%s+") or line:match("^%s*import%s+") then
                       bonus = bonus + 100
                     end
-
-                    -- init.py = even lower priority
                     if file:match("/__init__%.py$") then
                       bonus = bonus + 200
                     end
-
-                    -- test in filepath
                     if file:match("/tests?/") then
                       bonus = bonus + 300
                     end
 
                     item.ref_penalty = bonus
                     item.score = (item.score or 0) - bonus
-                    -- vim.notify(vim.inspect(item), vim.log.levels.DEBUG, { title = "LSP Reference Item" })
-
                     return item
                   end,
-                  matcher = {
-                    -- Set to true to enforce your sorting logic even when the query input is blank
-                    sort_empty = true,
-                  },
-
+                  matcher = { sort_empty = true },
                   sort = {
                     fields = { "ref_penalty:asc", "score:desc", "#text", "idx" },
                   },
-
                   win = {
                     input = {
                       keys = {
@@ -76,5 +93,4 @@ return {
       },
     },
   },
-  vim.lsp.inlay_hint.enable(true),
 }

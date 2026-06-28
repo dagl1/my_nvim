@@ -292,23 +292,9 @@ vim.api.nvim_set_keymap("v", "<leader>rb", "<Plug>SnipRun", { silent = true })
 -- proper exit
 vim.keymap.set({ "i", "v" }, "<C-c>", "<Esc>", { desc = "Exit insert mode" })
 
--- Trouble
--- vim.keymap.set(
---   "n",
---   "<leader>xx",
---   "<cmd>Trouble diagnostics toggle win.type=split win.position=right win.size=0.8<cr>",
---   { desc = "Toggle Trouble" }
--- )
-
 -- Json format
 vim.keymap.set("n", "<leader>jf", function()
   vim.cmd("%!jq .")
 end, { desc = "Format JSON" })
-
--- snacks.picker.lsp_references() is a better version of vim.lsp.buf.references() that uses Snacks picker
--- lsp search references
--- vim.keymap.set("n", "gd", function()
---   sn
--- end, { desc = "LSP references" })
 
 require("config.after_lazy")

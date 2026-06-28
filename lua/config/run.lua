@@ -1,6 +1,34 @@
 -- lua/config/run.lua
 local M = {}
 
+local function open_in_editor(file, line)
+  if not file then
+    return
+  end
+
+  -- find a normal window
+  local win = nil
+
+  for _, w in ipairs(vim.api.nvim_list_wins()) do
+    local buf = vim.api.nvim_win_get_buf(w)
+    if vim.bo[buf].buftype ~= "terminal" then
+      win = w
+      break
+    end
+  end
+
+  if not win then
+    vim.cmd("vsplit")
+    win = vim.api.nvim_get_current_win()
+  end
+
+  vim.api.nvim_set_current_win(win)
+  vim.cmd("edit " .. file)
+
+  if line and line > 0 then
+    vim.api.nvim_win_set_cursor(win, { line, 0 })
+  end
+end
 local function is_term_open(term)
   if term.window and vim.api.nvim_win_is_valid(term.window) then
     return true
@@ -8,10 +36,150 @@ local function is_term_open(term)
   return false
 end
 
+--------------------------------------------------------------------------------
+-- Traceback navigation
+--------------------------------------------------------------------------------
+
+local traceback = {
+  frames = nil,
+  index = nil,
+  ready = true,
+}
+local function parse_traceback(buf)
+  local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
+
+  local frames = {}
+
+  local in_traceback = false
+
+  for _, line in ipairs(lines) do
+    if line:match("^Traceback %(most recent call last%):") then
+      frames = {}
+      in_traceback = true
+    elseif in_traceback then
+      local file, lnum = line:match('File "([^"]+)", line (%d+)')
+
+      if file then
+        -- Ignore stdlib/internal frames
+        if not file:match("^<") and not file:match("^<frozen") and vim.fn.filereadable(file) == 1 then
+          table.insert(frames, {
+            file = file,
+            line = tonumber(lnum),
+          })
+        end
+      elseif #frames > 0 and line ~= "" then
+        -- We've reached the exception message
+        break
+      end
+    end
+  end
+  print(vim.inspect(frames))
+
+  if #frames == 0 then
+    traceback.frames = nil
+    traceback.index = nil
+    return
+  end
+
+  traceback.frames = frames
+  traceback.index = #frames
+end
+
+local function update_traceback_from_runner()
+  local runner = _G.python_runner
+  if not runner or not runner.bufnr then
+    return
+  end
+  if traceback.ready == false then
+    return
+  end
+
+  vim.schedule(function()
+    if vim.api.nvim_buf_is_valid(runner.bufnr) then
+      parse_traceback(runner.bufnr)
+    end
+  end)
+end
+
+local function traceback_next()
+  if traceback.ready then
+    update_traceback_from_runner()
+    traceback.ready = false
+  end
+  if not traceback.frames then
+    return
+  end
+
+  traceback.index = math.max(1, traceback.index - 1)
+  local frame = traceback.frames[traceback.index]
+  open_in_editor(frame.file, frame.line)
+end
+
+local function traceback_prev()
+  if traceback.ready then
+    update_traceback_from_runner()
+    traceback.ready = false
+  end
+
+  if not traceback.frames then
+    return
+  end
+
+  traceback.index = math.min(#traceback.frames, traceback.index + 1)
+  local frame = traceback.frames[traceback.index]
+  open_in_editor(frame.file, frame.line)
+end
+
+local function traceback_reset()
+  vim.b.traceback = nil
+end
+
+local function show_traceback()
+  if not traceback.frames then
+    vim.notify("No traceback frames available", vim.log.levels.INFO)
+    return
+  end
+
+  local items = {}
+  for i, frame in ipairs(traceback.frames) do
+    table.insert(items, string.format("%d: %s:%d", i, frame.file, frame.line))
+  end
+
+  vim.ui.select(items, {
+    prompt = "Select traceback frame:",
+  }, function(choice)
+    if not choice then
+      return
+    end
+
+    local index = tonumber(choice:match("^(%d+):"))
+    if index then
+      traceback.index = index
+      local frame = traceback.frames[index]
+      open_in_editor(frame.file, frame.line)
+    end
+  end)
+end
+
+vim.keymap.set("n", "<leader>tn", traceback_next, {
+  desc = "Next traceback frame",
+})
+
+vim.keymap.set("n", "<leader>tN", traceback_prev, {
+  desc = "Previous traceback frame",
+})
+
+vim.keymap.set("n", "<leader>tr", traceback_reset, {
+  desc = "Reset traceback cache",
+})
+
+vim.keymap.set("n", "<leader>ts", show_traceback, {
+  desc = "Show traceback frames",
+})
+
 local function to_bool(v)
   return v == "true" or v == "1" or v == "yes"
 end
-
 M.configs = {
   dev = {
     base_dir = vim.fn.getcwd(),
@@ -105,6 +273,10 @@ function M.run()
 
   runner:send(string.rep("\n", height))
   runner:send(cmd .. "\n")
+  traceback.ready = true
+  if runner.bufnr and vim.api.nvim_buf_is_valid(runner.bufnr) then
+    vim.b[runner.bufnr].traceback = nil
+  end
 end
 
 function M.run_python_file()
@@ -148,6 +320,10 @@ function M.run_python_file()
   local height = vim.api.nvim_win_get_height(win)
   runner:send(string.rep("\n", height))
   runner:send(python .. " '" .. file .. "'", true)
+  traceback.ready = true
+  if runner.bufnr and vim.api.nvim_buf_is_valid(runner.bufnr) then
+    vim.b[runner.bufnr].traceback = nil
+  end
 end
 function M.set_active(name)
   if M.configs[name] then

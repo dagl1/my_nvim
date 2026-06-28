@@ -172,7 +172,6 @@ vim.api.nvim_create_autocmd("BufEnter", {
 
     local ft = vim.api.nvim_get_option_value("filetype", { buf = buf })
 
-    print("ft", ft)
     if ft == "markdown" then
       return
     end
@@ -263,7 +262,7 @@ vim.api.nvim_create_autocmd("FileType", {
           vim.api.nvim_win_set_cursor(current_win, cursor_pos)
         end
       end, 100)
-    end, { buffer = true, silent = true, desc = "Trigger visuele codeblock SnipRun" })
+    end, { buffer = true, silent = true, desc = "Trigger visual codeblock SnipRun" })
   end,
 })
 
@@ -286,4 +285,55 @@ vim.keymap.set("n", "q", function()
   vim.api.nvim_win_close(0, true)
 end, {
   buffer = sniprun_buf,
+  desc = "Close SnipRun terminal",
+})
+
+-- fold docstrings
+vim.api.nvim_create_autocmd("FileType", {
+  pattern = "python",
+  callback = function()
+    local only_docstrings_query = [[
+      ;; Alleen module-level docstrings targeten
+      (module . (expression_statement (string)) @fold)
+
+      ;; Alleen functie docstrings targeten
+      (function_definition
+        body: (block . (expression_statement (string)) @fold))
+
+      ;; Alleen klasse docstrings targeten
+      (class_definition
+        body: (block . (expression_statement (string)) @fold))
+    ]]
+
+    pcall(vim.treesitter.query.set, "python", "folds", only_docstrings_query)
+
+    vim.opt_local.foldmethod = "expr"
+    vim.opt_local.foldexpr = "v:lua.vim.treesitter.foldexpr()"
+
+    vim.opt_local.foldlevel = 0
+    vim.opt_local.foldenable = true
+
+    vim.defer_fn(function()
+      if vim.api.nvim_buf_is_valid(0) then
+        vim.cmd("normal! zx")
+      end
+    end, 50)
+  end,
+})
+-- autofolding docstrings
+vim.opt.foldmethod = "expr"
+vim.opt.foldexpr = "v:lua.vim.treesitter.foldexpr()"
+
+-- notification highlights
+vim.api.nvim_create_autocmd("BufReadPost", {
+  pattern = "*.snacks_picker_preview",
+  callback = function(ev)
+    local bufname = vim.api.nvim_buf_get_name(ev.buf)
+
+    if bufname:match("notifications") or bufname:match("history") then
+      vim.bo[ev.buf].filetype = "snacks_notif"
+
+      vim.wo.wrap = true
+    end
+  end,
 })
