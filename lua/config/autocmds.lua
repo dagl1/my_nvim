@@ -337,3 +337,101 @@ vim.api.nvim_create_autocmd("BufReadPost", {
     end
   end,
 })
+-- Create an augroup to manage our custom jump list tracking
+local jump_track_group = vim.api.nvim_create_augroup("InsertJumpTracker", { clear = true })
+
+-- 1. Track position right BEFORE entering Insert mode
+vim.api.nvim_create_autocmd("InsertEnter", {
+  group = jump_track_group,
+  callback = function()
+    -- Mark the current location in the jump list
+    vim.cmd("normal! m`")
+  end,
+})
+
+-- 2. Track position right BEFORE leaving Insert mode
+vim.api.nvim_create_autocmd("InsertLeave", {
+  group = jump_track_group,
+  callback = function()
+    -- Mark the location where you finished typing
+    vim.cmd("normal! m`")
+  end,
+})
+
+local ns_id = vim.api.nvim_create_namespace("InlineLspReferences")
+
+local function update_buffer_references()
+  local bufnr = vim.api.nvim_get_current_buf()
+  local clients = vim.lsp.get_clients({ bufnr = bufnr })
+
+  if #clients == 0 then
+    return
+  end
+
+  -- Clear all previous counts across the entire buffer
+  vim.api.nvim_buf_clear_namespace(bufnr, ns_id, 0, -1)
+
+  -- Get every line in the file
+  local lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
+  local doc_uri = vim.uri_from_bufnr(bufnr)
+
+  for idx, line_text in ipairs(lines) do
+    local actual_line_num = idx - 1
+
+    -- Match lines containing a python definition
+    if line_text:match("%f[%w]def%s") or line_text:match("%f[%w]class%s") then
+      local _, keyword_end = line_text:find("%f[%w]def%s")
+      if not keyword_end then
+        _, keyword_end = line_text:find("%f[%w]class%s")
+      end
+
+      -- If we successfully found the start of the function/class identifier name
+      if keyword_end then
+        -- Lua strings are 1-indexed, Neovim LSP characters are 0-indexed
+        local name_col = keyword_end
+
+        -- Structure the parameter payload exactly how ty expects it
+        local params = {
+          textDocument = { uri = doc_uri },
+          position = { line = actual_line_num, character = name_col },
+          context = { includeDeclaration = false },
+        }
+
+        -- Fire the request to the active client
+        vim.lsp.buf_request(bufnr, "textDocument/references", params, function(err, result, ctx, _)
+          if err or not result or #result == 0 then
+            return
+          end
+
+          -- Double check that the line still exists and hasn't been edited mid-request
+          if vim.api.nvim_buf_is_valid(bufnr) then
+            local current_text = vim.api.nvim_buf_get_lines(bufnr, actual_line_num, actual_line_num + 1, false)[1] or ""
+            if not (current_text:match("%f[%w]def%s") or current_text:match("%f[%w]class%s")) then
+              return
+            end
+
+            local count = #result
+            if count > 1 then
+              text = string.format("     %d usages", count)
+            elseif count == 1 then
+              text = "     1 usage"
+            end
+            vim.api.nvim_buf_set_extmark(bufnr, ns_id, actual_line_num, 0, {
+              virt_text = { { text, "Comment" } },
+              virt_text_pos = "eol",
+            })
+          end
+        end)
+      end
+    end
+  end
+end
+
+-- Automate tracking when saving the file or holding the cursor still
+vim.api.nvim_create_autocmd({ "CursorHold", "BufWritePost" }, {
+  group = vim.api.nvim_create_augroup("LspBufferReferences", { clear = true }),
+  pattern = "*.py",
+  callback = function()
+    update_buffer_references()
+  end,
+})

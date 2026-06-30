@@ -2,6 +2,13 @@ return {
   "windwp/nvim-autopairs",
   opts = {
     check_ts = true,
+    enabled = function(bufnr)
+      local buf_type = vim.api.nvim_buf_get_option(bufnr, "buftype")
+      if buf_type == "prompt" or buf_type == "nofile" then
+        return false
+      end
+      return true
+    end,
   },
   config = function(_, opts)
     local autopairs = require("nvim-autopairs")

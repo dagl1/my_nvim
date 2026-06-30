@@ -144,6 +144,24 @@ vim.keymap.set("n", "<Leader>yp", function()
   vim.fn.setreg("*", text, regtype)
 end, { desc = "Restore protected yank" })
 
+-- Re-map paste to reset visual selection marks for 'gv'
+local function paste_and_set_marks(keys)
+  return function()
+    -- Perform the actual paste command
+    vim.cmd("normal! " .. keys)
+
+    -- Set visual start '< to the start of pasted text '[
+    vim.api.nvim_buf_set_mark(0, "<", vim.api.nvim_buf_get_mark(0, "[")[1], vim.api.nvim_buf_get_mark(0, "[")[2], {})
+    -- Set visual end '> to the end of pasted text ']
+    vim.api.nvim_buf_set_mark(0, ">", vim.api.nvim_buf_get_mark(0, "]")[1], vim.api.nvim_buf_get_mark(0, "]")[2], {})
+  end
+end
+-- Apply to Normal and Visual mode paste keys
+vim.keymap.set("n", "p", paste_and_set_marks("p"), { desc = "Paste and set gv marks" })
+vim.keymap.set("n", "P", paste_and_set_marks("P"), { desc = "Paste before and set gv marks" })
+vim.keymap.set("x", "p", paste_and_set_marks("p"), { desc = "Visual paste and set gv marks" })
+vim.keymap.set("x", "P", paste_and_set_marks("P"), { desc = "Visual paste before and set gv marks" })
+
 -------------------------------------------------------------------------------
 -- Comments
 vim.keymap.set("v", "<C-_>", function()
@@ -298,3 +316,8 @@ vim.keymap.set("n", "<leader>jf", function()
 end, { desc = "Format JSON" })
 
 require("config.after_lazy")
+
+-- Saving i o tree
+vim.keymap.set("n", "<C-d>", "m`<C-d>", { noremap = true, silent = true })
+-- Save to jump list before scrolling up half a page
+vim.keymap.set("n", "<C-u>", "m`<C-u>", { noremap = true, silent = true })

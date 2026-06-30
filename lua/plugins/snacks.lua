@@ -1,3 +1,12 @@
+local ctx_mock = {
+  notifier = {
+    get_render = function()
+      return function(buf, notif, _ctx)
+        vim.api.nvim_buf_set_lines(buf, 0, -1, true, vim.split(notif.msg, "\n"))
+      end
+    end,
+  },
+}
 return {
   {
     "folke/snacks.nvim",
@@ -55,6 +64,20 @@ return {
       opts.picker.sources.notifications.win.input.keys = opts.picker.sources.notifications.win.input.keys or {}
       opts.picker.sources.notifications.win.input.keys["<Esc>"] = { "close", mode = { "n", "i" } }
       opts.picker.sources.notifications.win.input.keys["<CR>"] = { "focus_preview", mode = { "n", "i" } }
+      opts.picker.sources.notifications.preview = function(ctx)
+        ---@type snacks.notifier.Notif
+        local notif = ctx.picker:current().item
+        ctx.preview:reset()
+        ctx.preview:set_lines(vim.split(notif.msg, "\n"))
+        local ok = pcall(function()
+          vim.bo[ctx.buf].modifiable = true
+          notif.style(ctx.buf, notif, ctx_mock)
+          vim.bo[ctx.buf].modifiable = false
+        end)
+        if not ok then
+          Snacks.picker.preview.preview(ctx)
+        end
+      end
 
       ---------------------------------------------------------
       -- CUSTOM TOGGLE SORT BY LAST MODIFIED
