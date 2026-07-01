@@ -288,30 +288,61 @@ end, {
   desc = "Close SnipRun terminal",
 })
 
--- fold docstrings
+----------------------- Folding ----
+-- Fold docstrings
+_G.python_custom_foldexpr = function()
+  local line_num = vim.v.lnum
+  local line_text = vim.fn.getline(line_num)
+
+  -- Check eerst op handmatige markers in de code
+  if line_text:match("{{{") then
+    return "a1"
+  elseif line_text:match("}}}") then
+    return "s1"
+  end
+
+  -- Val daarna pas terug op de docstrings query
+  return vim.treesitter.foldexpr()
+end
+
 vim.api.nvim_create_autocmd("FileType", {
   pattern = "python",
   callback = function()
     local only_docstrings_query = [[
-      ;; Alleen module-level docstrings targeten
       (module . (expression_statement (string)) @fold)
-
-      ;; Alleen functie docstrings targeten
-      (function_definition
-        body: (block . (expression_statement (string)) @fold))
-
-      ;; Alleen klasse docstrings targeten
-      (class_definition
-        body: (block . (expression_statement (string)) @fold))
+      (function_definition body: (block . (expression_statement (string)) @fold))
+      (class_definition body: (block . (expression_statement (string)) @fold))
     ]]
-
     pcall(vim.treesitter.query.set, "python", "folds", only_docstrings_query)
 
     vim.opt_local.foldmethod = "expr"
-    vim.opt_local.foldexpr = "v:lua.vim.treesitter.foldexpr()"
+    vim.opt_local.foldexpr = "v:lua.python_custom_foldexpr()"
 
     vim.opt_local.foldlevel = 0
     vim.opt_local.foldenable = true
+
+    -- ========================================================
+    -- VOEG DIT TOE: Handmatige folds maken met 'zf' in Python
+    -- ========================================================
+    -- In Visual Mode: Selecteer tekst en druk op 'zf' om er markers omheen te zetten
+    vim.keymap.set("v", "zf", function()
+      -- Haal de begin- en eindregels van de visuele selectie op
+      local start_line = vim.fn.line("v")
+      local end_line = vim.fn.line(".")
+      if start_line > end_line then
+        start_line, end_line = end_line, start_line
+      end
+
+      -- Voeg de sluitende marker toe onderaan (eerst onderaan om regelnummers niet te verschuiven)
+      vim.fn.append(end_line, "# }}}")
+      -- Voeg de openende marker toe bovenaan
+      vim.fn.append(start_line - 1, "# {{{")
+
+      -- Forceer Neovim om de vouwen direct opnieuw te berekenen
+      vim.cmd("normal! zx")
+    end, { buffer = true, desc = "Create manual fold marker" })
+
+    -- ========================================================
 
     vim.defer_fn(function()
       if vim.api.nvim_buf_is_valid(0) then
@@ -320,10 +351,8 @@ vim.api.nvim_create_autocmd("FileType", {
     end, 50)
   end,
 })
--- autofolding docstrings
-vim.opt.foldmethod = "expr"
-vim.opt.foldexpr = "v:lua.vim.treesitter.foldexpr()"
 
+------------ Notifications
 -- notification highlights
 vim.api.nvim_create_autocmd("BufReadPost", {
   pattern = "*.snacks_picker_preview",

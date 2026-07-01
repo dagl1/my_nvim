@@ -28,10 +28,12 @@ vim.keymap.set("n", "<C-CR>", function()
   local before = line:sub(1, col)
   local after = line:sub(col + 1)
 
-  vim.api.nvim_set_current_line(before)
-  vim.api.nvim_buf_set_lines(0, row, row, false, { indent .. after })
-
-  vim.api.nvim_win_set_cursor(0, { row + 1, #indent })
+  pcall(vim.api.nvim_set_current_line, before)
+  -- vim.api.nvim_set_current_line(before)
+  pcall(vim.api.nvim_buf_set_lines, 0, row, row, false, { indent .. after })
+  -- vim.api.nvim_buf_set_lines(0, row, row, false, { indent .. after })
+  pcall(vim.api.nvim_win_set_cursor, 0, { row + 1, #indent })
+  -- vim.api.nvim_win_set_cursor(0, { row + 1, #indent })
 end, { silent = true })
 
 ----------------- Buffer navigation --------------
