@@ -29,12 +29,6 @@ local function open_in_editor(file, line)
     vim.api.nvim_win_set_cursor(win, { line, 0 })
   end
 end
-local function is_term_open(term)
-  if term.window and vim.api.nvim_win_is_valid(term.window) then
-    return true
-  end
-  return false
-end
 
 --------------------------------------------------------------------------------
 -- Traceback navigation
@@ -51,29 +45,32 @@ local function parse_traceback(buf)
   local frames = {}
 
   local in_traceback = false
+  local last_was_empty = false
 
   for _, line in ipairs(lines) do
     if line:match("^Traceback %(most recent call last%):") then
-      frames = {}
       in_traceback = true
     elseif in_traceback then
       local file, lnum = line:match('File "([^"]+)", line (%d+)')
+      -- print("Parsed line:", line, "=>", file, lnum)
 
       if file then
         -- Ignore stdlib/internal frames
+        last_was_empty = false
         if not file:match("^<") and not file:match("^<frozen") and vim.fn.filereadable(file) == 1 then
           table.insert(frames, {
             file = file,
             line = tonumber(lnum),
           })
         end
-      elseif #frames > 0 and line ~= "" then
-        -- We've reached the exception message
+      elseif #frames > 0 and line ~= "" and last_was_empty then
         break
+      elseif #frames > 0 and line ~= "" then
+        last_was_empty = true
       end
     end
   end
-  print(vim.inspect(frames))
+  -- print(vim.inspect(frames))
 
   if #frames == 0 then
     traceback.frames = nil
@@ -131,7 +128,11 @@ local function traceback_prev()
 end
 
 local function traceback_reset()
-  vim.b.traceback = nil
+  traceback = {
+    frames = nil,
+    index = nil,
+    ready = true,
+  }
 end
 
 local function show_traceback()
@@ -161,11 +162,11 @@ local function show_traceback()
   end)
 end
 
-vim.keymap.set("n", "<leader>tn", traceback_next, {
+vim.keymap.set("n", "<leader>tN", traceback_next, {
   desc = "Next traceback frame",
 })
 
-vim.keymap.set("n", "<leader>tN", traceback_prev, {
+vim.keymap.set("n", "<leader>tn", traceback_prev, {
   desc = "Previous traceback frame",
 })
 
@@ -274,9 +275,11 @@ function M.run()
   runner:send(string.rep("\n", height))
   runner:send(cmd .. "\n")
   traceback.ready = true
-  if runner.bufnr and vim.api.nvim_buf_is_valid(runner.bufnr) then
-    vim.b[runner.bufnr].traceback = nil
-  end
+  -- if runner.bufnr and vim.api.nvim_buf_is_valid(runner.bufnr) then
+  --   vim.b[runner.bufnr].traceback = nil
+  -- end
+  -- move to normal mode
+  vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes("<C-\\><C-n>", true, false, true), "n", false)
 end
 
 function M.run_python_file()
@@ -321,9 +324,11 @@ function M.run_python_file()
   runner:send(string.rep("\n", height))
   runner:send(python .. " '" .. file .. "'", true)
   traceback.ready = true
-  if runner.bufnr and vim.api.nvim_buf_is_valid(runner.bufnr) then
-    vim.b[runner.bufnr].traceback = nil
-  end
+  -- if runner.bufnr and vim.api.nvim_buf_is_valid(runner.bufnr) then
+  --   vim.b[runner.bufnr].traceback = nil
+  -- end
+  -- move to normal mode
+  vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes("<C-\\><C-n>", true, false, true), "n", false)
 end
 function M.set_active(name)
   if M.configs[name] then
