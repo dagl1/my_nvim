@@ -138,20 +138,57 @@ vim.api.nvim_create_autocmd("BufWritePre", {
   group = ruff_string_wrap_group,
   pattern = "*.py",
   callback = function()
-    -- 1. Find single or double-quoted lines exceeding 88 characters (excluding docstrings)
-    -- This specific Vim regex splits long string literals by injecting a backslash-break
-    -- and wrapping them cleanly.
     local save_cursor = vim.fn.getpos(".")
+    local bufnr = vim.api.nvim_get_current_buf()
 
-    -- Command finds strings longer than 88 chars and inserts structural line breaks
-    vim.cmd([[silent! g/\v^[^#]*['"]([^'"]){88,}/s/\v([^'"]{60,}\s)/&\n/g]])
+    local max_len = vim.bo[bufnr].textwidth
+    if max_len == 0 then
+      local cc = vim.wo.colorcolumn
+      max_len = tonumber(cc:match("(%d+)")) or 88
+    end
 
-    -- 2. Restore cursor location so your view doesn't jump
-    vim.fn.setpos(".", save_cursor)
+    local split_target = max_len - 20
+    local lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
+    local changed = false
 
-    -- 3. Trigger your standard LSP formatting/fixing
-    -- (This gives the broken strings back to Ruff to add neat parentheses and alignment)
-    vim.lsp.buf.format({ async = false })
+    for i = #lines, 1, -1 do
+      local line = lines[i]
+
+      if not line:match("^%s*#") and #line > max_len then
+        local start_idx, end_idx, prefix, quote = line:find("([fF]?)([\"'])")
+
+        if start_idx then
+          local rest_of_line = line:sub(end_idx + 1)
+          -- CONTROLE: Check of de string sluit vóór het einde van de regel
+          local is_closed = rest_of_line:match("^.-" .. quote)
+
+          if not is_closed then
+            local leading = line:sub(1, start_idx - 1)
+            local content = rest_of_line
+
+            if #content > 30 then
+              local split_pos = content:sub(1, split_target):match(".*%s()")
+              if split_pos then
+                local part1 = content:sub(1, split_pos - 1)
+                local part2 = content:sub(split_pos)
+
+                lines[i] = leading .. prefix .. quote .. part1 .. quote
+                local indent = line:match("^%s*") or ""
+                local next_line = indent .. "    " .. prefix .. quote .. part2
+
+                table.insert(lines, i + 1, next_line)
+                changed = true
+              end
+            end
+          end
+        end
+      end
+    end
+
+    if changed then
+      vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, lines)
+      vim.fn.setpos(".", save_cursor)
+    end
   end,
 })
 

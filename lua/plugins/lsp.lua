@@ -57,7 +57,11 @@ return {
                   transform = function(item)
                     local line = item.line or ""
                     local file = item.file or ""
-                    local bonus = 0
+                    local bonus = 200
+
+                    if line:match("^%s*def%s+") or line:match("^%s*class%s+") then
+                      bonus = bonus - 100
+                    end
 
                     if line:match("^%s*from%s+") or line:match("^%s*import%s+") then
                       bonus = bonus + 100

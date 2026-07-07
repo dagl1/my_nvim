@@ -6,12 +6,23 @@ local function open_in_editor(file, line)
     return
   end
 
-  -- find a normal window
   local win = nil
 
   for _, w in ipairs(vim.api.nvim_list_wins()) do
     local buf = vim.api.nvim_win_get_buf(w)
-    if vim.bo[buf].buftype ~= "terminal" then
+    local buftype = vim.bo[buf].buftype
+    local filetype = vim.bo[buf].filetype
+    local win_config = vim.api.nvim_win_get_config(w)
+
+    local is_normal_win = buftype ~= "terminal"
+      and buftype ~= "nofile"
+      and buftype ~= "prompt"
+      and not filetype:match("^snacks_")
+      and filetype ~= "NvimTree"
+      and filetype ~= "neo-tree"
+      and (not win_config.relative or win_config.relative == "")
+
+    if is_normal_win then
       win = w
       break
     end
@@ -23,10 +34,21 @@ local function open_in_editor(file, line)
   end
 
   vim.api.nvim_set_current_win(win)
-  vim.cmd("edit " .. file)
+  vim.cmd("edit " .. vim.fn.fnameescape(file))
 
   if line and line > 0 then
-    vim.api.nvim_win_set_cursor(win, { line, 0 })
+    local current_buf = vim.api.nvim_win_get_buf(win)
+
+    vim.schedule(function()
+      if vim.api.nvim_win_is_valid(win) and vim.api.nvim_buf_is_valid(current_buf) then
+        local line_count = vim.api.nvim_buf_line_count(current_buf)
+        local target_line = math.min(line, line_count)
+        if target_line > 0 then
+          vim.api.nvim_win_set_cursor(win, { target_line, 0 })
+          vim.cmd("normal! zz")
+        end
+      end
+    end)
   end
 end
 
@@ -42,35 +64,33 @@ local traceback = {
 local function parse_traceback(buf)
   local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
 
-  local frames = {}
-
-  local in_traceback = false
-  local last_was_empty = false
-
-  for _, line in ipairs(lines) do
-    if line:match("^Traceback %(most recent call last%):") then
-      in_traceback = true
-    elseif in_traceback then
-      local file, lnum = line:match('File "([^"]+)", line (%d+)')
-      -- print("Parsed line:", line, "=>", file, lnum)
-
-      if file then
-        -- Ignore stdlib/internal frames
-        last_was_empty = false
-        if not file:match("^<") and not file:match("^<frozen") and vim.fn.filereadable(file) == 1 then
-          table.insert(frames, {
-            file = file,
-            line = tonumber(lnum),
-          })
-        end
-      elseif #frames > 0 and line ~= "" and last_was_empty then
-        break
-      elseif #frames > 0 and line ~= "" then
-        last_was_empty = true
-      end
+  -- Find the last traceback
+  local start
+  for i = #lines, 1, -1 do
+    if lines[i]:match("^Traceback %(most recent call last%):") then
+      start = i
+      break
     end
   end
-  -- print(vim.inspect(frames))
+
+  if not start then
+    traceback.frames = nil
+    traceback.index = nil
+    return
+  end
+
+  local frames = {}
+
+  for i = start + 1, #lines do
+    local file, lnum = lines[i]:match('File "([^"]+)", line (%d+)')
+
+    if file and not file:match("^<") and not file:match("^<frozen") and vim.fn.filereadable(file) == 1 then
+      table.insert(frames, {
+        file = file,
+        line = tonumber(lnum),
+      })
+    end
+  end
 
   if #frames == 0 then
     traceback.frames = nil
@@ -103,6 +123,10 @@ local function traceback_next()
     update_traceback_from_runner()
     traceback.ready = false
   end
+  -- wait for 0.1 seconds to allow the traceback to be parsed
+  vim.wait(100, function()
+    return traceback.frames ~= nil
+  end)
   if not traceback.frames then
     return
   end
@@ -117,6 +141,10 @@ local function traceback_prev()
     update_traceback_from_runner()
     traceback.ready = false
   end
+  -- wait for 0.1 seconds to allow the traceback to be parsed
+  vim.wait(100, function()
+    return traceback.frames ~= nil
+  end)
 
   if not traceback.frames then
     return
