@@ -35,7 +35,7 @@ return {
       opts.picker.sources.explorer = opts.picker.sources.explorer or {}
       opts.picker.sources.explorer.layout = opts.picker.sources.explorer.layout or {}
       opts.picker.sources.explorer.layout.layout = {
-        width = 24,
+        width = 34,
       }
       opts.picker.sources.explorer.win = opts.picker.sources.explorer.win or {}
       opts.picker.sources.explorer.win.list = opts.picker.sources.explorer.win.list or {}

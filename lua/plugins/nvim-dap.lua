@@ -85,6 +85,12 @@ return {
       vim.keymap.set("n", "<leader>du", function()
         dapui.toggle()
       end, { desc = "Toggle DAP UI", noremap = true, silent = true })
+
+      -- Keymap to resize/reset DAP UI windows
+      vim.keymap.set("n", "<leader>dr", function()
+        dapui.close()
+        dapui.open({ reset = true })
+      end, { desc = "Resize/Reset DAP UI Windows", noremap = true, silent = true })
     end,
   },
 }

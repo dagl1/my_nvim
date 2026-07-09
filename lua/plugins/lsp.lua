@@ -57,24 +57,32 @@ return {
                   transform = function(item)
                     local line = item.line or ""
                     local file = item.file or ""
-                    local bonus = 200
+
+                    local line_number = item.pos[1]
+                    local column_number = item.pos[2]
+
+                    local penalty = 200
 
                     if line:match("^%s*def%s+") or line:match("^%s*class%s+") then
-                      bonus = bonus - 100
+                      penalty = penalty - 100
+                    end
+
+                    if line_number < 20 and column_number == 4 then
+                      penalty = penalty + 100
                     end
 
                     if line:match("^%s*from%s+") or line:match("^%s*import%s+") then
-                      bonus = bonus + 100
+                      penalty = penalty + 100
                     end
                     if file:match("/__init__%.py$") then
-                      bonus = bonus + 200
+                      penalty = penalty + 200
                     end
                     if file:match("/tests?/") then
-                      bonus = bonus + 300
+                      penalty = penalty + 300
                     end
 
-                    item.ref_penalty = bonus
-                    item.score = (item.score or 0) - bonus
+                    item.ref_penalty = penalty
+                    item.score = (item.score or 0) - penalty
                     return item
                   end,
                   matcher = { sort_empty = true },
