@@ -318,11 +318,17 @@ vim.keymap.set("n", "<leader>rt", function()
   vim.api.nvim_win_set_buf(0, sniprun_terminal_buf)
   sniprun_terminal_win = vim.api.nvim_get_current_win()
 end)
-vim.keymap.set("n", "q", function()
-  vim.api.nvim_win_close(0, true)
-end, {
-  buffer = sniprun_buf,
-  desc = "Close SnipRun terminal",
+vim.api.nvim_create_autocmd("FileType", {
+  pattern = "sniprun_terminal", -- Controleer of jouw SnipRun-bestandstype zo heet (vaak 'sniprun_terminal')
+  callback = function(args)
+    vim.keymap.set("n", "q", function()
+      vim.api.nvim_win_close(0, true)
+    end, {
+      buffer = args.buf,
+      desc = "Close SnipRun terminal",
+      silent = true,
+    })
+  end,
 })
 
 ----------------------- Folding ----

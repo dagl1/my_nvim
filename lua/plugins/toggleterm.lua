@@ -29,7 +29,9 @@ local function open_in_editor(file, line)
   vim.api.nvim_set_current_win(win)
   vim.cmd("edit " .. file)
 
+  -- print("Opened file: " .. file .. " at line: " .. line)
   if line and line > 0 then
+    print("Jumping to line: " .. line)
     vim.api.nvim_win_set_cursor(win, { line, 0 })
   end
 end
@@ -106,7 +108,8 @@ return {
         -- gf = file only
         vim.keymap.set("n", "gf", function()
           local line = vim.api.nvim_get_current_line()
-          local file = line:match('"([^"]+%..+)"') or line:match("([%w%._%-%/]+%..+)")
+          local file, lnum = parse_file_and_line(line)
+          -- local file = line:match('"([^"]+%..+)"') or line:match("([%w%._%-%/]+%..+)")
           open_in_editor(file, 1)
         end, { buffer = buf, silent = true })
 
