@@ -15,7 +15,13 @@ local function open_in_editor(file, line)
 
   for _, w in ipairs(vim.api.nvim_list_wins()) do
     local buf = vim.api.nvim_win_get_buf(w)
-    if vim.bo[buf].buftype ~= "terminal" then
+    if
+      vim.bo[buf].buftype ~= "terminal"
+      and vim.bo[buf].filetype ~= "toggleterm"
+      -- not snacks explorer =nofile 
+      and vim.bo[buf].buftype ~= "nofile"
+      -- Buffer: 24, buftype: nofile, filetype: snacks_layout_box
+    then
       win = w
       break
     end

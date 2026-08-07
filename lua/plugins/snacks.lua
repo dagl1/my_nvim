@@ -144,7 +144,7 @@ return {
         -- post-action adjustment
         if ok and is_error then
           vim.schedule(function()
-            vim.cmd("normal! 2j")
+            vim.cmd("normal! 2j7l")
           end)
         end
       end
