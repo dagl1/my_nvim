@@ -1,5 +1,10 @@
 return {
   "saghen/blink.cmp",
+  -- Add blink.compat so blink can read the cmp-vimtex plugin
+  dependencies = {
+    "saghen/blink.compat",
+    "micangl/cmp-vimtex", -- The source plugin
+  },
 
   opts = {
     -- completion sources (THIS is the important part)
@@ -8,7 +13,15 @@ return {
         "lsp",
         "path",
         "buffer",
-        -- ❌ NO "copilot"
+        "zotcite",
+      },
+      -- 2. Define the provider and hook it up using blink.compat
+      providers = {
+
+        zotcite = {
+          name = "zotcite",
+          module = "blink.compat.source",
+        },
       },
     },
 
@@ -24,11 +37,6 @@ return {
           else
             return "\t"
           end
-
-          --   if else
-          --     print("snippet not active")
-          --     return cmp.select_and_accept()
-          --   end
         end,
         "snippet_forward",
         "fallback",
@@ -38,13 +46,13 @@ return {
     signature = {
       enabled = false,
     },
-
     completion = {
       menu = {
         auto_show = true,
       },
+
       ghost_text = {
-        enabled = false, -- IMPORTANT: Copilot handles ghost text, not blink
+        enabled = false,
       },
     },
   },

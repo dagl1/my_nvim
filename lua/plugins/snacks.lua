@@ -10,6 +10,20 @@ local ctx_mock = {
 return {
   {
     "folke/snacks.nvim",
+
+    ---------------------------------------------------------
+    -- 1. YOUR KEYBINDINGS GO HERE
+    ---------------------------------------------------------
+    keys = {
+      {
+        "<leader>zi",
+        function()
+          -- Dynamically calls snacks terminal execution for zoxide interactive history
+          require("snacks").terminal("bash -ic 'cdi'")
+        end,
+        desc = "Zoxide (Interactive Jump)",
+      },
+    },
     opts = function(_, opts)
       opts.notifier = opts.notifier or {}
 
@@ -117,6 +131,12 @@ return {
         linebreak = true,
         breakindent = true,
       })
+      ---------------------------------------------------------
+      -- 2. ENSURE TERMINAL FEAT IS ENABLED IN OPTS
+      ---------------------------------------------------------
+      opts.terminal = opts.terminal or {}
+      opts.terminal.enabled = true
+
       return opts
     end,
 

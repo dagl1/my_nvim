@@ -14,7 +14,40 @@ return {
 
       require("dapui").setup({})
       require("nvim-dap-virtual-text").setup({
-        commented = true, -- Show virtual text alongside comment
+        enabled_commands = true,
+        highlight_changed_variables = true, -- Highlight changed values with NvimDapVirtualTextChanged, else always NvimDapVirtualText
+        highlight_new_as_changed = true, -- Highlight new variables in the same way as changed variables
+        show_stop_reason = true, -- Show stop reason when stopped for exceptions
+        commented = false,
+        all_references = false,
+        virt_text_pos = "inline",
+        -- virt_text_pos = "eol", -- Position of virtual text, can be 'eol' or 'inline'
+        -- - A callback that determines how a variable is displayed or whether it should be omitted
+        --- @param variable Variable https://microsoft.github.io/debug-adapter-protocol/specification#Types_Variable
+        --- @param buf number
+        --- @param stackframe dap.StackFrame https://microsoft.github.io/debug-adapter-protocol/specification#Types_StackFrame
+        --- @param node userdata tree-sitter node identified as variable definition of reference (see `:h tsnode`)
+        --- @param options nvim_dap_virtual_text_options Current options for nvim-dap-virtual-text
+        --- @return string|nil A text how the virtual text should be displayed or nil, if this variable shouldn't be displayed
+        display_callback = function(variable, buf, stackframe, node, options)
+          -- by default, strip out new line characters
+          local max_len = 100
+          if options.virt_text_pos == "inline" then
+            local total_text = " = " .. variable.value:gsub("%s+", " ")
+            if #total_text > max_len then
+              return total_text:sub(1, max_len) .. "..."
+            end
+
+            return total_text
+          else
+            local total_text = variable.name .. " = " .. variable.value:gsub("%s+", " ")
+            if #total_text > max_len then
+              return total_text:sub(1, max_len) .. "..."
+            end
+
+            return total_text
+          end
+        end,
       })
 
       dap_python.setup("uv")

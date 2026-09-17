@@ -21,7 +21,8 @@ return {
         },
 
         ["cspell_ls"] = {
-          filetypes = { "python", "markdown" },
+          -- add latex
+          filetypes = { "python", "markdown", "latex", "tex", "bib" },
         },
 
         ["harper_ls"] = {

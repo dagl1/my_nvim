@@ -1,0 +1,27 @@
+diff --git a/lua/zotcite/lsp.lua b/lua/zotcite/lsp.lua
+index d55c584..5abbef3 100644
+--- a/lua/zotcite/lsp.lua
++++ b/lua/zotcite/lsp.lua
+@@ -75,9 +75,19 @@ local complete = function(callback, lnum, char)
+     }
+     if itms then
+         for _, v in pairs(itms) do
+-            local txt = string.format("%s (%s) %s", v.alastnm, v.year, v.title)
+-            if vim.fn.strwidth(txt) > 58 then
+-                txt = vim.fn.strcharpart(txt, 0, 58) .. "⋯"
++            local authors = vim.split(v.alastnm, ",", { plain = true })
++            local author_text
++
++            if #authors > 1 then
++                author_text = vim.trim(authors[1]) .. " et al."
++            else
++                author_text = vim.trim(authors[1] or v.alastnm)
++            end
++
++            local txt = string.format("%s — %s (%s)", author_text, v.title, v.year)
++
++            if vim.fn.strwidth(txt) > 90 then
++                txt = vim.fn.strcharpart(txt, 0, 90) .. "⋯"
+             end
+             local kt =
+                 require("zotcite.config").get_key_type(vim.api.nvim_get_current_buf())

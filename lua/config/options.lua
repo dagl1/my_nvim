@@ -60,3 +60,25 @@ vim.opt.scrolloff = 68
 vim.opt_local.formatoptions = "tcrq"
 -- backup
 vim.opt.backupdir = vim.fn.stdpath("data") .. "/backup//"
+
+-- auto-read cloud changes
+vim.opt.autoread = true
+
+vim.o.pumwidth = 80
+
+-- In your init.lua / plugin config
+vim.g.vimtex_complete_bib = {
+  simple = 1,
+  -- INCREASE THE SPACING BUDGET FOR THE FIELDS:
+  -- %a = author (given 40 characters), %t = title (given 80 characters)
+  menu_fmt = "%-40a %-80t",
+}
+
+-- Automatically trigger a check when the file changes on the cloud
+vim.api.nvim_create_autocmd({ "BufEnter", "CursorHold", "CursorHoldI", "FocusGained" }, {
+  pattern = "*",
+  command = "checktime",
+})
+
+vim.opt.directory = vim.fn.expand("~/.local/state/nvim/swap//")
+-- Set the swap file directory to a custom location

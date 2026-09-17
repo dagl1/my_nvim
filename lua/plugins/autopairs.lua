@@ -20,5 +20,20 @@ return {
     autopairs.add_rules({
       Rule('"""', '"""', "python"):with_pair(cond.not_after_text([["]])):with_move(cond.none()),
     })
+    -- Define all the opening characters you want to restrict
+    local chars = { "(", "{", "[", '"', "'" }
+
+    -- A regex pattern matching any of these brackets/quotes: ( ) { } [ ] " '#
+    -- also add _ to tthis
+    local bracket_pattern = "[%([%){%}%[%]\"'_]"
+
+    -- Loop through each character and block auto-pairing if it sits next to a bracket
+    for _, char in ipairs(chars) do
+      autopairs.get_rules(char)[1]:with_pair(cond.not_after_regex(bracket_pattern))
+    end
+    -- local bracket_pattern = [[([{}])_ "'%([%){%}%[%]]
+    -- for _, char in ipairs(chars) do
+    --   autopairs.get_rules(char)[1]:with_pair(cond.not_after_regex(bracket_pattern_2))
+    -- end
   end,
 }

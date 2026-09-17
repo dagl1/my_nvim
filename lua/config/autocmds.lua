@@ -133,50 +133,116 @@ vim.api.nvim_create_autocmd("FileType", {
 --     -- end)
 --   end,
 -- })
+-- Global/local helper function to check if a specific position is a docstring via Tree-sitter
+local function get_ts_string_type(bufnr, row, col)
+  local has_ts, ts = pcall(vim.treesitter.get_parser, bufnr, "python")
+  if not has_ts or not ts then
+    return nil
+  end
 
-vim.api.nvim_create_autocmd("BufWritePre", {
-  group = ruff_string_wrap_group,
-  pattern = "*.py",
-  callback = function()
-    local save_cursor = vim.fn.getpos(".")
-    local bufnr = vim.api.nvim_get_current_buf()
+  local tree = ts:parse()[1]
+  if not tree then
+    return nil
+  end
 
-    local max_len = vim.bo[bufnr].textwidth
-    if max_len == 0 then
-      local cc = vim.wo.colorcolumn
-      max_len = tonumber(cc:match("(%d+)")) or 88
+  -- Get the specific syntax node at this coordinate
+  local node = tree:root():named_descendant_for_range(row, col, row, col)
+  while node do
+    if node:type() == "string" then
+      -- Fallback query evaluation: read parent or check node structural metadata
+      local parent = node:parent()
+      if
+        parent
+        and (
+          parent:type() == "expression_statement"
+          or parent:type() == "function_definition"
+          or parent:type() == "class_definition"
+        )
+      then
+        return "docstring"
+      end
+      return "regular_string"
     end
+    node = node:parent()
+  end
+  return nil
+end
 
-    local split_target = max_len - 20
-    local lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
-    local changed = false
+function run_custom_comment_wrap(bufnr)
+  local save_cursor = vim.fn.getpos(".")
 
-    for i = #lines, 1, -1 do
-      local line = lines[i]
+  local max_len = vim.bo[bufnr].textwidth
+  if max_len == 0 then
+    local cc = vim.wo.colorcolumn
+    max_len = tonumber(cc:match("(%d+)")) or 88
+  end
 
-      if not line:match("^%s*#") and #line > max_len then
-        local start_idx, end_idx, prefix, quote = line:find("([fF]?)([\"'])")
+  local lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
+  local changed = false
 
-        if start_idx then
-          local rest_of_line = line:sub(end_idx + 1)
-          -- CONTROLE: Check of de string sluit vóór het einde van de regel
-          local is_closed = rest_of_line:match("^.-" .. quote)
+  -- Loop backwards to allow clean line insertion shifts
+  for i = #lines, 1, -1 do
+    local line = lines[i]
+    local current_row = i - 1 -- 0-indexed for Tree-sitter usage
 
-          if not is_closed then
-            local leading = line:sub(1, start_idx - 1)
-            local content = rest_of_line
+    if #line > max_len then
+      -- Use Tree-sitter to classify the string block type on this line
+      local str_type = get_ts_string_type(bufnr, current_row, #line - 1)
 
-            if #content > 30 then
-              local split_pos = content:sub(1, split_target):match(".*%s()")
-              if split_pos then
-                local part1 = content:sub(1, split_pos - 1)
-                local part2 = content:sub(split_pos)
+      if str_type == "docstring" then
+        -- DOCSTRING WRAPPING MODE
+        local indent = line:match("^%s*") or ""
+        local content = line:sub(#indent + 1)
+        local target_split = max_len - #indent
 
-                lines[i] = leading .. prefix .. quote .. part1 .. quote
-                local indent = line:match("^%s*") or ""
-                local next_line = indent .. "    " .. prefix .. quote .. part2
+        local split_pos = content:sub(1, target_split):match(".*%s()")
+        if not split_pos and #content > target_split then
+          split_pos = target_split
+        end
 
-                table.insert(lines, i + 1, next_line)
+        if split_pos then
+          local part1 = content:sub(1, split_pos - 1):gsub("%s+$", "")
+          local part2 = content:sub(split_pos):gsub("^%s+", "")
+          if #part1 > 0 and #part2 > 0 then
+            lines[i] = indent .. part1
+            table.insert(lines, i + 1, indent .. part2)
+            changed = true
+          end
+        end
+      elseif str_type ~= "regular_string" then
+        -- COMMENT WRAPPING ENGINE (Only process if NOT a regular string line)
+        local code_part, comment_part = line:match("^([^#]-)%s*(#.*)$")
+
+        if code_part and comment_part and #code_part > 0 and not code_part:match("^%s*$") then
+          local clean_code = code_part:gsub("%s+$", "")
+          if #clean_code > max_len then
+            goto continue -- SITUATION 1: Code line itself is too long
+          else
+            -- SITUATION 2: Move inline comment above the code
+            local indent = line:match("^%s*") or ""
+            lines[i] = clean_code
+            table.insert(lines, i, indent .. comment_part)
+            changed = true
+          end
+        elseif line:match("^%s*#") then
+          -- SITUATION 3: Pure standalone comment block line formatting
+          local indent, comment_content = line:match("^(%s*#%s*)(.*)$")
+          if comment_content then
+            local target_split = max_len - #indent
+            local split_pos = comment_content:sub(1, target_split):match(".*%s()")
+            if not split_pos then
+              split_pos = comment_content:match("^.-%s()")
+            end
+            if not split_pos and #comment_content > target_split then
+              split_pos = target_split
+            end
+
+            if split_pos then
+              local part1 = comment_content:sub(1, split_pos - 1):gsub("%s+$", "")
+              local part2 = comment_content:sub(split_pos):gsub("^%s+", "")
+              if #part1 > 0 and #part2 > 0 then
+                lines[i] = indent .. part1
+                table.insert(lines, i + 1, indent .. part2)
                 changed = true
               end
             end
@@ -184,11 +250,79 @@ vim.api.nvim_create_autocmd("BufWritePre", {
         end
       end
     end
+    ::continue::
+  end
 
-    if changed then
-      vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, lines)
-      vim.fn.setpos(".", save_cursor)
-    end
+  if changed then
+    vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, lines)
+    vim.fn.setpos(".", save_cursor)
+  end
+end
+
+local ruff_string_wrap_group = vim.api.nvim_create_augroup("RuffCommentWrap", { clear = true })
+
+vim.api.nvim_create_autocmd("FileType", {
+  pattern = "python",
+  callback = function()
+    vim.keymap.set("i", "<CR>", function()
+      local bufnr = vim.api.nvim_get_current_buf()
+      local row, col = unpack(vim.api.nvim_win_get_cursor(0))
+      local line = vim.api.nvim_get_current_line()
+      local before_cursor = line:sub(1, col)
+
+      -- 1. Escape bracket evaluations immediately
+      local _, open_count = before_cursor:gsub("{", "")
+      local _, close_count = before_cursor:gsub("}", "")
+      if open_count > close_count then
+        return vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes("<CR>", true, true, true), "n", false)
+      end
+
+      -- 2. Use live Tree-sitter parsing to inspect our cursor coordinates
+      -- Note: API row inputs are 0-indexed, col can look directly at current index minus 1
+      local ts_type = get_ts_string_type(bufnr, row - 1, math.max(0, col - 1))
+
+      if ts_type == "docstring" then
+        -- Inside a docstring! Regular new line break.
+        return vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes("<CR>", true, true, true), "n", false)
+      end
+
+      if ts_type == "regular_string" then
+        local line = vim.api.nvim_get_current_line()
+        local col = vim.api.nvim_win_get_cursor(0)[2]
+
+        local before = line:sub(1, col)
+        local after = line:sub(col + 1)
+
+        local f_prefix, quote = before:match("([fF]?)(['\"])[^'\"]*$")
+        local has_closing = after:match("^[^'\"]*(['\"])")
+
+        if quote and has_closing == quote then
+          local prefix = (f_prefix ~= "") and f_prefix or ""
+          local keys = quote .. "<CR>" .. prefix .. quote .. "<Left>"
+          return vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes(keys, true, true, true), "n", false)
+        end
+      end
+
+      -- Default fallback standard behavior
+      return vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes("<CR>", true, true, true), "n", false)
+    end, { buffer = true, desc = "Smart split Python strings safely using Tree-sitter" })
+  end,
+})
+
+vim.api.nvim_create_autocmd("BufWritePre", {
+  group = ruff_string_wrap_group,
+  pattern = "*.py",
+  callback = function()
+    -- 1. Force Ruff LSP to format synchronously first
+    vim.lsp.buf.format({ async = false, timeout_ms = 1000 })
+
+    -- 2. Run your custom comment wrapping logic immediately after
+    local bufnr = vim.api.nvim_get_current_buf()
+    run_custom_comment_wrap(bufnr)
+
+    -- 3. We run it again as previous command might only move a string up without formatting
+    local bufnr = vim.api.nvim_get_current_buf()
+    run_custom_comment_wrap(bufnr)
   end,
 })
 
@@ -505,5 +639,14 @@ vim.api.nvim_create_autocmd({ "CursorHold", "BufWritePost" }, {
   pattern = "*.py",
   callback = function()
     update_buffer_references()
+  end,
+})
+
+-- Zoxide integration
+vim.api.nvim_create_autocmd("DirChanged", {
+  callback = function()
+    local current_dir = vim.v.event.cwd
+    -- Run zoxide add silently in the background
+    vim.fn.jobstart({ "zoxide", "add", current_dir })
   end,
 })
