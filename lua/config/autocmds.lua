@@ -262,7 +262,7 @@ end
 local ruff_string_wrap_group = vim.api.nvim_create_augroup("RuffCommentWrap", { clear = true })
 
 vim.api.nvim_create_autocmd("FileType", {
-  pattern = "python",
+  pattern = { "python", "tex" },
   callback = function()
     vim.keymap.set("i", "<CR>", function()
       local bufnr = vim.api.nvim_get_current_buf()
@@ -270,42 +270,49 @@ vim.api.nvim_create_autocmd("FileType", {
       local line = vim.api.nvim_get_current_line()
       local before_cursor = line:sub(1, col)
 
-      -- 1. Escape bracket evaluations immediately
+      -- 1. Escape bracket evaluations immediately.
+      -- This is useful for both Python and LaTeX.
       local _, open_count = before_cursor:gsub("{", "")
       local _, close_count = before_cursor:gsub("}", "")
+
       if open_count > close_count then
         return vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes("<CR>", true, true, true), "n", false)
       end
 
-      -- 2. Use live Tree-sitter parsing to inspect our cursor coordinates
-      -- Note: API row inputs are 0-indexed, col can look directly at current index minus 1
-      local ts_type = get_ts_string_type(bufnr, row - 1, math.max(0, col - 1))
+      -- 2. Python-specific Tree-sitter string handling.
+      if vim.bo.filetype == "python" then
+        local ts_type = get_ts_string_type(bufnr, row - 1, math.max(0, col - 1))
 
-      if ts_type == "docstring" then
-        -- Inside a docstring! Regular new line break.
-        return vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes("<CR>", true, true, true), "n", false)
-      end
+        if ts_type == "docstring" then
+          -- Inside a docstring: regular newline.
+          return vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes("<CR>", true, true, true), "n", false)
+        end
 
-      if ts_type == "regular_string" then
-        local line = vim.api.nvim_get_current_line()
-        local col = vim.api.nvim_win_get_cursor(0)[2]
+        if ts_type == "regular_string" then
+          local line = vim.api.nvim_get_current_line()
+          local col = vim.api.nvim_win_get_cursor(0)[2]
 
-        local before = line:sub(1, col)
-        local after = line:sub(col + 1)
+          local before = line:sub(1, col)
+          local after = line:sub(col + 1)
 
-        local f_prefix, quote = before:match("([fF]?)(['\"])[^'\"]*$")
-        local has_closing = after:match("^[^'\"]*(['\"])")
+          local f_prefix, quote = before:match("([fF]?)(['\"])[^'\"]*$")
+          local has_closing = after:match("^[^'\"]*(['\"])")
 
-        if quote and has_closing == quote then
-          local prefix = (f_prefix ~= "") and f_prefix or ""
-          local keys = quote .. "<CR>" .. prefix .. quote .. "<Left>"
-          return vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes(keys, true, true, true), "n", false)
+          if quote and has_closing == quote then
+            local prefix = (f_prefix ~= "") and f_prefix or ""
+            local keys = quote .. "<CR>" .. prefix .. quote .. "<Left>"
+
+            return vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes(keys, true, true, true), "n", false)
+          end
         end
       end
 
-      -- Default fallback standard behavior
+      -- 3. Default behavior for everything else, including VimTeX.
       return vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes("<CR>", true, true, true), "n", false)
-    end, { buffer = true, desc = "Smart split Python strings safely using Tree-sitter" })
+    end, {
+      buffer = true,
+      desc = "Smart split strings safely",
+    })
   end,
 })
 
@@ -323,6 +330,69 @@ vim.api.nvim_create_autocmd("BufWritePre", {
     -- 3. We run it again as previous command might only move a string up without formatting
     local bufnr = vim.api.nvim_get_current_buf()
     run_custom_comment_wrap(bufnr)
+  end,
+})
+function run_latex_wrap(bufnr)
+  local save_cursor = vim.fn.getpos(".")
+
+  local max_len = vim.bo[bufnr].textwidth
+  if max_len == 0 then
+    local cc = vim.wo.colorcolumn
+    max_len = tonumber(cc:match("(%d+)")) or 88
+  end
+
+  local lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
+  local changed = false
+
+  for i = #lines, 1, -1 do
+    local line = lines[i]
+
+    if #line > max_len then
+      local indent = line:match("^%s*") or ""
+      local content = line:sub(#indent + 1)
+
+      -- Don't touch LaTeX commands.
+      -- Examples:
+      --   \section{...}
+      --   \textbf{...}
+      --   \begin{...}
+      --   \end{...}
+      if not content:match("^\\") then
+        local target_split = max_len - #indent
+
+        if target_split > 0 then
+          local split_pos = content:sub(1, target_split):match(".*%s()")
+
+          if not split_pos and #content > target_split then
+            split_pos = target_split
+          end
+
+          if split_pos then
+            local part1 = content:sub(1, split_pos - 1):gsub("%s+$", "")
+            local part2 = content:sub(split_pos):gsub("^%s+", "")
+
+            if #part1 > 0 and #part2 > 0 then
+              lines[i] = indent .. part1
+              table.insert(lines, i + 1, indent .. part2)
+              changed = true
+            end
+          end
+        end
+      end
+    end
+  end
+
+  if changed then
+    vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, lines)
+  end
+
+  vim.fn.setpos(".", save_cursor)
+end
+vim.api.nvim_create_autocmd("BufWritePre", {
+  group = ruff_string_wrap_group,
+  pattern = "*.tex",
+  callback = function()
+    run_latex_wrap(vim.api.nvim_get_current_buf())
   end,
 })
 
