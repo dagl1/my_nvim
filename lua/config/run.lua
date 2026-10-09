@@ -53,158 +53,354 @@ local function open_in_editor(file, line)
 end
 
 --------------------------------------------------------------------------------
--- Traceback navigation
+-- Find the output of the latest cz-commit / cz-retry command
 --------------------------------------------------------------------------------
 
-local traceback = {
-  frames = nil,
-  index = nil,
-  ready = true,
-}
-local function parse_traceback(buf)
-  local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
-
-  -- Find the last traceback
-  local start
+local function last_cz_command_output_start(lines)
   for i = #lines, 1, -1 do
-    if lines[i]:match("^Traceback %(most recent call last%):") then
-      start = i
-      break
+    -- Match the command anywhere on the echoed shell prompt line.
+    if lines[i]:find("cz%-commit") or lines[i]:find("cz%-retry") then
+      return i + 1
     end
   end
 
-  if not start then
-    traceback.frames = nil
-    traceback.index = nil
-    return
-  end
+  return nil
+end
 
-  local frames = {}
+--------------------------------------------------------------------------------
+-- Shared buffer-specific navigator
+--------------------------------------------------------------------------------
 
-  for i = start + 1, #lines do
-    local file, lnum = lines[i]:match('File "([^"]+)", line (%d+)')
+local function make_navigator(opts)
+  local states = {}
 
-    if file and not file:match("^<") and not file:match("^<frozen") and vim.fn.filereadable(file) == 1 then
-      table.insert(frames, {
-        file = file,
-        line = tonumber(lnum),
-      })
+  local function reset(buf)
+    if buf then
+      states[buf] = nil
+    else
+      states = {}
     end
   end
 
-  if #frames == 0 then
-    traceback.frames = nil
-    traceback.index = nil
-    return
-  end
-
-  traceback.frames = frames
-  traceback.index = #frames
-end
-
-local function update_traceback_from_runner()
-  local runner = _G.python_runner
-  if not runner or not runner.bufnr then
-    return
-  end
-  if traceback.ready == false then
-    return
-  end
-
-  vim.schedule(function()
-    if vim.api.nvim_buf_is_valid(runner.bufnr) then
-      parse_traceback(runner.bufnr)
+  local function parse(buf)
+    if not buf or not vim.api.nvim_buf_is_valid(buf) then
+      return {}
     end
-  end)
-end
 
-local function traceback_next()
-  if traceback.ready then
-    update_traceback_from_runner()
-    traceback.ready = false
-  end
-  -- wait for 0.1 seconds to allow the traceback to be parsed
-  vim.wait(100, function()
-    return traceback.frames ~= nil
-  end)
-  if not traceback.frames then
-    return
+    return opts.parse(buf) or {}
   end
 
-  traceback.index = math.max(1, traceback.index - 1)
-  local frame = traceback.frames[traceback.index]
-  open_in_editor(frame.file, frame.line)
-end
+  local function get_state(buf)
+    if not buf then
+      return nil, false
+    end
 
-local function traceback_prev()
-  if traceback.ready then
-    update_traceback_from_runner()
-    traceback.ready = false
-  end
-  -- wait for 0.1 seconds to allow the traceback to be parsed
-  vim.wait(100, function()
-    return traceback.frames ~= nil
-  end)
+    if not states[buf] then
+      local entries = parse(buf)
 
-  if not traceback.frames then
-    return
-  end
+      if #entries == 0 then
+        vim.notify(opts.empty_message, vim.log.levels.INFO)
+        return nil, false
+      end
 
-  traceback.index = math.min(#traceback.frames, traceback.index + 1)
-  local frame = traceback.frames[traceback.index]
-  open_in_editor(frame.file, frame.line)
-end
+      states[buf] = {
+        entries = entries,
+        index = #entries + 1,
+      }
 
-local function traceback_reset()
-  traceback = {
-    frames = nil,
-    index = nil,
-    ready = true,
-  }
-end
+      return states[buf], true
+    end
 
-local function show_traceback()
-  if not traceback.frames then
-    vim.notify("No traceback frames available", vim.log.levels.INFO)
-    return
+    return states[buf], false
   end
 
-  local items = {}
-  for i, frame in ipairs(traceback.frames) do
-    table.insert(items, string.format("%d: %s:%d", i, frame.file, frame.line))
-  end
+  local function navigate(buf, direction)
+    local state, initialized = get_state(buf)
 
-  vim.ui.select(items, {
-    prompt = "Select traceback frame:",
-  }, function(choice)
-    if not choice then
+    if not state then
       return
     end
 
-    local index = tonumber(choice:match("^(%d+):"))
-    if index then
-      traceback.index = index
-      local frame = traceback.frames[index]
-      open_in_editor(frame.file, frame.line)
+    if initialized then
+      vim.defer_fn(function()
+        -- Re-parse the buffer after 100 ms.
+        reset(buf)
+        local refreshed_state = get_state(buf)
+
+        if not refreshed_state then
+          return
+        end
+
+        -- Move to the requested entry.
+        refreshed_state.index = math.max(1, math.min(#refreshed_state.entries, refreshed_state.index + direction))
+
+        opts.open(refreshed_state.entries[refreshed_state.index])
+      end, 100)
+
+      return
     end
-  end)
+
+    -- Normal navigation on subsequent keypresses.
+    state.index = math.max(1, math.min(#state.entries, state.index + direction))
+
+    opts.open(state.entries[state.index])
+  end
+
+  local function show(buf)
+    local state = states[buf]
+
+    if not state then
+      local initialized
+      state, initialized = get_state(buf)
+
+      if not state then
+        return
+      end
+
+      -- Interactive selection is allowed to initialize and open a location.
+      if initialized then
+        -- Continue below with the newly parsed entries.
+      end
+    end
+
+    local items = {}
+    for i, entry in ipairs(state.entries) do
+      items[i] = opts.label(entry, i)
+    end
+
+    vim.ui.select(items, { prompt = opts.prompt }, function(_, idx)
+      if not idx or not states[buf] then
+        return
+      end
+
+      states[buf].index = idx
+      opts.open(states[buf].entries[idx])
+    end)
+  end
+
+  return {
+    next = function(buf)
+      navigate(buf, -1)
+    end,
+    prev = function(buf)
+      navigate(buf, 1)
+    end,
+    reset = reset,
+    show = show,
+  }
 end
 
-vim.keymap.set("n", "<leader>tN", traceback_next, {
-  desc = "Next traceback frame",
+--------------------------------------------------------------------------------
+-- Ruff errors
+--------------------------------------------------------------------------------
+
+local ruff_navigator = make_navigator({
+  empty_message = "No Ruff errors found after the latest cz command",
+  prompt = "Select Ruff error:",
+
+  parse = function(buf)
+    local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
+    local first = last_cz_command_output_start(lines)
+
+    vim.notify(("cz command starts at line %s (buffer has %d lines)"):format(tostring(first), #lines))
+    vim.print(vim.api.nvim_buf_get_lines(_G.root_term.buf, 0, -1, false))
+
+    if not first then
+      return {}
+    end
+
+    local errors = {}
+
+    for i = first, #lines do
+      local file, lnum, col, code = lines[i]:match("^%s*(.-):(%d+):(%d+):%s+([A-Z]%d+)")
+
+      if file and file ~= "" then
+        table.insert(errors, {
+          file = file,
+          line = tonumber(lnum),
+          col = tonumber(col),
+          code = code,
+        })
+      end
+    end
+
+    return errors
+  end,
+
+  label = function(entry, i)
+    return string.format("%d: %s:%d:%d [%s]", i, entry.file, entry.line, entry.col, entry.code)
+  end,
+
+  open = function(entry)
+    open_in_editor(entry.file, entry.line, entry.col)
+  end,
 })
 
-vim.keymap.set("n", "<leader>tn", traceback_prev, {
-  desc = "Previous traceback frame",
+--------------------------------------------------------------------------------
+-- Python traceback frames
+--------------------------------------------------------------------------------
+
+local function make_traceback_parser(command_scoped)
+  return function(buf)
+    local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
+
+    local first = 1
+    if command_scoped then
+      first = last_cz_command_output_start(lines)
+      if not first then
+        return {}
+      end
+    end
+
+    -- Find the last traceback within the selected output.
+    local start
+    for i = #lines, first, -1 do
+      if lines[i]:match("^Traceback %(most recent call last%):") then
+        start = i
+        break
+      end
+    end
+
+    if not start then
+      return {}
+    end
+
+    local frames = {}
+
+    for i = start + 1, #lines do
+      local file, lnum = lines[i]:match('File "([^"]+)", line (%d+)')
+
+      if file and not file:match("^<") and not file:match("^<frozen") and vim.fn.filereadable(file) == 1 then
+        table.insert(frames, {
+          file = file,
+          line = tonumber(lnum),
+        })
+      end
+    end
+
+    return frames
+  end
+end
+
+local traceback_navigator = make_navigator({
+  empty_message = "No traceback frames available",
+  prompt = "Select traceback frame:",
+  parse = make_traceback_parser(false),
+
+  label = function(frame, i)
+    return string.format("%d: %s:%d", i, frame.file, frame.line)
+  end,
+
+  open = function(frame)
+    open_in_editor(frame.file, frame.line)
+  end,
 })
 
-vim.keymap.set("n", "<leader>tr", traceback_reset, {
-  desc = "Reset traceback cache",
+local root_traceback_navigator = make_navigator({
+  empty_message = "No traceback frames found after the latest cz command",
+  prompt = "Select root terminal traceback frame:",
+  parse = make_traceback_parser(true),
+
+  label = function(frame, i)
+    return string.format("%d: %s:%d", i, frame.file, frame.line)
+  end,
+
+  open = function(frame)
+    open_in_editor(frame.file, frame.line)
+  end,
+})
+--------------------------------------------------------------------------------
+-- Resolve source buffers independently of the current buffer
+--------------------------------------------------------------------------------
+
+local function get_root_term_buf()
+  local term = _G.root_term
+  local buf = term and term.buf
+
+  if not buf or not vim.api.nvim_buf_is_valid(buf) then
+    vim.notify("Root terminal is not available", vim.log.levels.WARN)
+    return nil
+  end
+
+  return buf
+end
+
+local function get_python_runner_buf()
+  local runner = _G.python_runner
+  local buf = runner and runner.bufnr
+
+  if not buf or not vim.api.nvim_buf_is_valid(buf) then
+    vim.notify("Python runner buffer is not available", vim.log.levels.WARN)
+    return nil
+  end
+
+  return buf
+end
+
+--------------------------------------------------------------------------------
+-- Run cz-commit in the root terminal
+--------------------------------------------------------------------------------
+
+local function run_cz_retry()
+  local term = _G.root_term
+  local buf = get_root_term_buf()
+
+  if not term or not buf then
+    return
+  end
+
+  local previous_win = vim.api.nvim_get_current_win()
+
+  -- Clear old results before starting a new run.
+  traceback_navigator.reset(buf)
+  ruff_navigator.reset(buf)
+
+  term:show()
+
+  local job = vim.b[buf].terminal_job_id
+  if not job then
+    vim.notify("Root terminal has no running job", vim.log.levels.WARN)
+  else
+    vim.api.nvim_chan_send(job, "cz-retry\n")
+  end
+
+  if vim.api.nvim_win_is_valid(previous_win) then
+    vim.api.nvim_set_current_win(previous_win)
+  end
+end
+
+--------------------------------------------------------------------------------
+-- Keymaps
+--------------------------------------------------------------------------------
+
+vim.keymap.set("n", "<leader>gr", run_cz_retry, {
+  desc = "Run cz-retry in root terminal",
 })
 
-vim.keymap.set("n", "<leader>ts", show_traceback, {
-  desc = "Show traceback frames",
-})
+vim.keymap.set("n", "<leader>gn", function()
+  ruff_navigator.next(get_root_term_buf())
+end, { desc = "Next root terminal Ruff error" })
+
+vim.keymap.set("n", "<leader>gN", function()
+  ruff_navigator.prev(get_root_term_buf())
+end, { desc = "Previous root terminal Ruff error" })
+
+vim.keymap.set("n", "<leader>gm", function()
+  ruff_navigator.show(get_root_term_buf())
+end, { desc = "Select root terminal Ruff error" })
+
+-- Python runner traceback: also works from any current buffer.
+vim.keymap.set("n", "<leader>tN", function()
+  traceback_navigator.next(get_python_runner_buf())
+end, { desc = "Next Python traceback frame" })
+
+vim.keymap.set("n", "<leader>tn", function()
+  traceback_navigator.prev(get_python_runner_buf())
+end, { desc = "Previous Python traceback frame" })
+
+vim.keymap.set("n", "<leader>tm", function()
+  traceback_navigator.show(get_python_runner_buf())
+end, { desc = "Select Python traceback frame" })
 
 local function to_bool(v)
   return v == "true" or v == "1" or v == "yes"
@@ -302,11 +498,10 @@ function M.run()
 
   runner:send(string.rep("\n", height))
   runner:send(cmd .. "\n")
-  traceback.ready = true
-  -- if runner.bufnr and vim.api.nvim_buf_is_valid(runner.bufnr) then
-  --   vim.b[runner.bufnr].traceback = nil
-  -- end
-  -- move to normal mode
+  if runner.bufnr and vim.api.nvim_buf_is_valid(runner.bufnr) then
+    traceback_navigator.reset(runner.bufnr)
+  end
+
   vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes("<C-\\><C-n>", true, false, true), "n", false)
 end
 
@@ -351,11 +546,9 @@ function M.run_python_file()
   local height = vim.api.nvim_win_get_height(win)
   runner:send(string.rep("\n", height))
   runner:send(python .. " '" .. file .. "'", true)
-  traceback.ready = true
-  -- if runner.bufnr and vim.api.nvim_buf_is_valid(runner.bufnr) then
-  --   vim.b[runner.bufnr].traceback = nil
-  -- end
-  -- move to normal mode
+  if runner.bufnr and vim.api.nvim_buf_is_valid(runner.bufnr) then
+    traceback_navigator.reset(runner.bufnr)
+  end
   vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes("<C-\\><C-n>", true, false, true), "n", false)
 end
 function M.set_active(name)
