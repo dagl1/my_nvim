@@ -131,17 +131,42 @@ local function make_navigator(opts)
           return
         end
 
-        -- Move to the requested entry.
-        refreshed_state.index = math.max(1, math.min(#refreshed_state.entries, refreshed_state.index + direction))
+        -- allow cycling so if at 1 and go prev, go to last, and if at last and go next, go to 1
 
-        opts.open(refreshed_state.entries[refreshed_state.index])
+        local count = #refreshed_state.entries
+
+        if count == 0 then
+          return
+        end
+
+        local index = refreshed_state.index + direction
+
+        if index < 1 then
+          index = count
+        elseif index > count then
+          index = 1
+        end
+
+        refreshed_state.index = index
+        opts.open(refreshed_state.entries[index])
       end, 100)
 
       return
     end
 
     -- Normal navigation on subsequent keypresses.
-    state.index = math.max(1, math.min(#state.entries, state.index + direction))
+    total_entries = #state.entries
+    if total_entries == 0 then
+      return
+    end
+
+    -- cycling:
+    state.index = state.index + direction
+    if state.index < 1 then
+      state.index = total_entries
+    elseif state.index > total_entries then
+      state.index = 1
+    end
 
     opts.open(state.entries[state.index])
   end
