@@ -31,14 +31,13 @@ return {
           end, vim.lsp.get_supported_filetypes or {}),
         },
 
-        -- Pyright uitschakelen
         pyright = { enabled = false, autosetup = false },
 
-        -- Ty configuratie
         ty = {
           settings = {
             ty = {
               enable = true,
+              diagnosticMode = "openFilesOnly",
               callArgumentNames = "all",
               variableTypeHints = true,
               variableTypes = true,

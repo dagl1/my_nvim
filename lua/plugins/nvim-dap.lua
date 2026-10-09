@@ -84,7 +84,10 @@ return {
       vim.keymap.set("n", "<leader>db", function()
         dap.toggle_breakpoint()
       end, { desc = "Toggle Breakpoint", noremap = true, silent = true })
-
+      vim.keymap.set("n", "<leader>dl", function()
+        local var_name = vim.fn.expand("<cword>")
+        require("dapui").elements.watches.add("len(" .. var_name .. ")")
+      end, { desc = "DAP: Watch list length" })
       -- Continue / Start
       vim.keymap.set("n", "<leader>dc", function()
         dap.continue()
