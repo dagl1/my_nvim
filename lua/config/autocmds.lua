@@ -720,3 +720,18 @@ vim.api.nvim_create_autocmd("DirChanged", {
     vim.fn.jobstart({ "zoxide", "add", current_dir })
   end,
 })
+
+-- Rust formatting
+-- Create an augroup to clear old autocommands and prevent duplicates
+local rust_fmt_group = vim.api.nvim_create_augroup("RustFormatting", { clear = true })
+
+vim.api.nvim_create_autocmd("BufWritePre", {
+  pattern = "*.rs",
+  group = rust_fmt_group,
+  callback = function()
+    vim.lsp.buf.format({
+      async = false, -- Must be false to block write until formatting finishes
+      timeout_ms = 1000,
+    })
+  end,
+})
