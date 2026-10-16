@@ -181,11 +181,11 @@ end, { desc = "Toggle comment + move down" })
 local run = require("config.run")
 run.load()
 
-vim.keymap.set("n", "<leader>rf", run.run_python_file, { desc = "Run Python file" })
-vim.keymap.set("n", "<leader>re", run.open_menu, { desc = "Run config menu" })
-vim.keymap.set("n", "F22", run.run, { desc = "Run active config" })
-vim.keymap.set("n", "<leader>ro", run.run, { desc = "Run active config" })
-vim.keymap.set("n", "<leader>ra", run.prompt_add, { desc = "Add config" })
+vim.keymap.set("n", "<leader>rf", run.run_file, { desc = "Run file" })
+vim.keymap.set("n", "<leader>re", run.open_menu, { desc = "Run Python config menu" })
+vim.keymap.set("n", "F22", run.run, { desc = "Run active Python config" })
+vim.keymap.set("n", "<leader>ro", run.run, { desc = "Run active Python config" })
+vim.keymap.set("n", "<leader>ra", run.prompt_add, { desc = "Add Python config" })
 
 ---------------------- code navigation ----------------------
 -- See ~/git/my_nvim/lua/plugins/snacks.lua for gd overwrite (from declaration to references)

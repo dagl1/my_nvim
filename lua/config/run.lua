@@ -530,11 +530,13 @@ function M.run()
   vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes("<C-\\><C-n>", true, false, true), "n", false)
 end
 
-function M.run_python_file()
+function M.run_file()
   local file = vim.fn.expand("%:p")
+  local valid_files = { "%.py$", "%.rs$" }
 
-  if not file:lower():match("%.py$") then
-    local message = "File " .. file .. " is not a python file and thus cannot run!"
+  -- if not file does not match any of the valid file patterns, return
+  if file:lower():match(valid_files[1]) == nil and file:lower():match(valid_files[2]) == nil then
+    local message = "File " .. file .. " is not a python or rust file and thus cannot run!"
     vim.notify(message, vim.log.levels.ERROR)
     return
   end
@@ -570,10 +572,35 @@ function M.run_python_file()
   end
   local height = vim.api.nvim_win_get_height(win)
   runner:send(string.rep("\n", height))
-  runner:send(python .. " '" .. file .. "'", true)
-  if runner.bufnr and vim.api.nvim_buf_is_valid(runner.bufnr) then
-    traceback_navigator.reset(runner.bufnr)
+
+  local current_dir = vim.fn.getcwd()
+
+  if file:match("%.rs$") then
+    if vim.fn.filereadable(current_dir .. "/Cargo.toml") == 0 then
+      local cargo_toml_path = vim.fn.findfile("Cargo.toml", current_dir .. "/**")
+
+      if cargo_toml_path ~= "" then
+        local cargo_dir = vim.fn.fnamemodify(cargo_toml_path, ":p:h")
+
+        runner:send("cd " .. cargo_dir, true)
+        vim.notify("Changed directory to " .. cargo_dir, vim.log.levels.INFO)
+      else
+        vim.notify("Cargo.toml not found in current directory or subdirectories", vim.log.levels.ERROR)
+        return
+      end
+    end
+
+    runner:send("cargo run", true)
+    vim.notify("Running cargo run in " .. vim.fn.getcwd(), vim.log.levels.INFO)
+    runner:send("cd " .. current_dir, true)
+  elseif file:match("%.py$") then
+    runner:send(python .. " '" .. file .. "'", true)
   end
+  traceback.ready = true
+  -- if runner.bufnr and vim.api.nvim_buf_is_valid(runner.bufnr) then
+  --   vim.b[runner.bufnr].traceback = nil
+  -- end
+  -- move to normal mode
   vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes("<C-\\><C-n>", true, false, true), "n", false)
 end
 function M.set_active(name)
