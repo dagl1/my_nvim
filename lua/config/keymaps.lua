@@ -69,14 +69,15 @@ vim.keymap.set("t", "<>", [[<C-\><C-n>]])
 vim.keymap.set("t", "<Esc", [[<C-\><C-n>]])
 
 ------------- Toggle terminal ---------------
-local root_term
+_G.root_term = nil
+
 vim.keymap.set({ "n", "t" }, "<F4>", function()
-  if not root_term then
-    root_term = Snacks.terminal(nil, {
+  if not _G.root_term then
+    _G.root_term = Snacks.terminal(nil, {
       cwd = LazyVim.root(),
     })
   else
-    root_term:toggle()
+    _G.root_term:toggle()
   end
 end)
 

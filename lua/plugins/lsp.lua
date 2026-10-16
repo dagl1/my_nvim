@@ -3,10 +3,41 @@ vim.g.lazyvim_python_lsp = { "ty" }
 return {
   {
     "neovim/nvim-lspconfig",
+    init = function()
+      vim.g.rustfmt_autosave = 0
+      local rust_fmt_group = vim.api.nvim_create_augroup("RustFormatting", { clear = true })
+      vim.api.nvim_create_autocmd("BufWritePre", {
+        pattern = "*.rs",
+        group = rust_fmt_group,
+        callback = function()
+          vim.lsp.buf.format({
+            async = false, -- Keeps save synchronous so it blocks until formatting finishes
+            timeout_ms = 1000,
+          })
+        end,
+      })
+    end,
     opts = {
       inlay_hints = { enabled = true },
 
       servers = {
+        -- Add rust_analyzer to your server pool
+        rust_analyzer = {
+          settings = {
+            ["rust-analyzer"] = {
+              cargo = {
+                allFeatures = true,
+              },
+              procMacro = {
+                enable = true,
+              },
+              -- rust-analyzer natively respects your local rustfmt.toml
+              rustfmt = {
+                extraArgs = {},
+              },
+            },
+          },
+        },
         ruff = {
           on_attach = function(client)
             client.server_capabilities.hoverProvider = false
@@ -31,14 +62,13 @@ return {
           end, vim.lsp.get_supported_filetypes or {}),
         },
 
-        -- Pyright uitschakelen
         pyright = { enabled = false, autosetup = false },
 
-        -- Ty configuratie
         ty = {
           settings = {
             ty = {
               enable = true,
+              diagnosticMode = "openFilesOnly",
               callArgumentNames = "all",
               variableTypeHints = true,
               variableTypes = true,
