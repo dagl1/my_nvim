@@ -596,7 +596,9 @@ function M.run_file()
   elseif file:match("%.py$") then
     runner:send(python .. " '" .. file .. "'", true)
   end
-  traceback.ready = true
+  if runner.bufnr and vim.api.nvim_buf_is_valid(runner.bufnr) then
+    traceback_navigator.reset(runner.bufnr)
+  end
   -- if runner.bufnr and vim.api.nvim_buf_is_valid(runner.bufnr) then
   --   vim.b[runner.bufnr].traceback = nil
   -- end

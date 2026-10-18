@@ -27,6 +27,14 @@ return {
         enabled = false, -- 🚫 disables Copilot “side panel”
       },
     },
+    config = function(_, opts)
+      require("copilot").setup(opts)
+
+      vim.keymap.set("n", "<leader>ct", function()
+        require("copilot.suggestion").toggle_auto_trigger()
+        vim.notify("Copilot auto-suggestions toggled")
+      end, { desc = "Toggle Copilot Auto Suggestions" })
+    end,
   },
   {
     { "zbirenbaum/copilot-cmp", enabled = false },

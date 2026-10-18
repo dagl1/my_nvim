@@ -4,6 +4,14 @@ return {
   {
     "neovim/nvim-lspconfig",
     init = function()
+      local function is_same_diagnostic(a, b)
+        return a.lnum == b.lnum
+          and a.col == b.col
+          and a.end_lnum == b.end_lnum
+          and a.end_col == b.end_col
+          and a.code == b.code
+          and a.message == b.message
+      end
       vim.g.rustfmt_autosave = 0
       local rust_fmt_group = vim.api.nvim_create_augroup("RustFormatting", { clear = true })
       vim.api.nvim_create_autocmd("BufWritePre", {
