@@ -3,6 +3,9 @@
 -- Add any additional keymaps here
 --
 
+-- Disable suspending Neovim with Ctrl+Z in Normal mode
+vim.keymap.set("n", "<C-z>", "<Nop>", { silent = true })
+
 ------------------- Autocomplete suggestion (non-copilot) ----------------------
 --- Super tab is set in ~/git/my_nvim/lua/plugins/blink.lua - vim.keymap.del("i", "<Tab>")
 vim.keymap.del("i", "<S-Tab>")
