@@ -386,7 +386,7 @@ local function run_cz_retry()
   if not job then
     vim.notify("Root terminal has no running job", vim.log.levels.WARN)
   else
-    vim.api.nvim_chan_send(job, "cz-retry\n")
+    vim.api.nvim_chan_send(job, "cz-retry\r")
   end
 
   if vim.api.nvim_win_is_valid(previous_win) then
