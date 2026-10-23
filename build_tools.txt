@@ -1,0 +1,27 @@
+cargo install bacon
+sccache
+coreutils
+bat
+du-dust or dua
+eza 
+mprocs
+ripgrep
+gitui
+cargo-info
+speedtest-rs
+uutils coreutils
+fish
+fd
+xh
+hyperfine
+fselect
+ncspot
+rusty-man
+delta
+ripgrep-all
+tokei
+wiki-tui
+just
+mask
+presenterm
+kondo
