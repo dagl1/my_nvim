@@ -19,30 +19,30 @@ return {
         group = rust_fmt_group,
         callback = function()
           vim.lsp.buf.format({
-            async = false, -- Keeps save synchronous so it blocks until formatting finishes
+            async = false,
             timeout_ms = 1000,
           })
         end,
       })
     end,
+
     opts = {
       inlay_hints = { enabled = true },
 
+      -- Correctly disable LazyVim's built-in diagnostics here so they never trigger
+      diagnostics = {
+        virtual_text = false,
+        virtual_lines = false,
+        underline = true,
+      },
+
       servers = {
-        -- Add rust_analyzer to your server pool
         rust_analyzer = {
           settings = {
             ["rust-analyzer"] = {
-              cargo = {
-                allFeatures = true,
-              },
-              procMacro = {
-                enable = true,
-              },
-              -- rust-analyzer natively respects your local rustfmt.toml
-              rustfmt = {
-                extraArgs = {},
-              },
+              cargo = { allFeatures = true },
+              procMacro = { enable = true },
+              rustfmt = { extraArgs = {} },
             },
           },
         },
@@ -52,15 +52,12 @@ return {
           end,
           init_options = {
             settings = {
-              lint = {
-                select = { "F401" },
-              },
+              lint = { select = { "F401" } },
             },
           },
         },
 
         ["cspell_ls"] = {
-          -- add latex
           filetypes = { "python", "markdown", "latex", "tex", "bib" },
         },
 
@@ -85,7 +82,6 @@ return {
           },
         },
 
-        -- Custom Snacks Picker shortcuts voor LSP References
         ["*"] = {
           keys = {
             { "gd", false },
@@ -96,20 +92,16 @@ return {
                   transform = function(item)
                     local line = item.line or ""
                     local file = item.file or ""
-
                     local line_number = item.pos[1]
                     local column_number = item.pos[2]
-
                     local penalty = 200
 
                     if line:match("^%s*def%s+") or line:match("^%s*class%s+") then
                       penalty = penalty - 100
                     end
-
                     if line_number < 20 and column_number == 4 then
                       penalty = penalty + 100
                     end
-
                     if line:match("^%s*from%s+") or line:match("^%s*import%s+") then
                       penalty = penalty + 100
                     end
@@ -143,5 +135,28 @@ return {
         },
       },
     },
+  },
+  {
+    "rachartier/tiny-inline-diagnostic.nvim",
+    event = "LspAttach",
+    priority = 1000,
+    config = function()
+      -- Turn off built-in diagnostic floating popups globally
+      vim.diagnostic.config({
+        virtual_text = false,
+        virtual_lines = false,
+        float = true,
+      })
+
+      require("tiny-inline-diagnostic").setup({
+        preset = "modern",
+        options = {
+          multilines = {
+            enabled = true,
+            always_show = true,
+          },
+        },
+      })
+    end,
   },
 }

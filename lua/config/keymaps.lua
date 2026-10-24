@@ -327,3 +327,5 @@ require("config.after_lazy")
 vim.keymap.set("n", "<C-d>", "m`<C-d>", { noremap = true, silent = true })
 -- Save to jump list before scrolling up half a page
 vim.keymap.set("n", "<C-u>", "m`<C-u>", { noremap = true, silent = true })
+
+vim.keymap.set("n", "<leader>dj", vim.diagnostic.open_float, { desc = "Show diagnostic" })
