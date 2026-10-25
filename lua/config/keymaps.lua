@@ -328,4 +328,31 @@ vim.keymap.set("n", "<C-d>", "m`<C-d>", { noremap = true, silent = true })
 -- Save to jump list before scrolling up half a page
 vim.keymap.set("n", "<C-u>", "m`<C-u>", { noremap = true, silent = true })
 
-vim.keymap.set("n", "<leader>dj", vim.diagnostic.open_float, { desc = "Show diagnostic" })
+-- Track the diagnostic float opened by `gl`
+local diagnostic_float_win = nil
+
+vim.keymap.set("n", "gl", function()
+  -- Always close the previous diagnostic float first
+  if diagnostic_float_win and vim.api.nvim_win_is_valid(diagnostic_float_win) then
+    vim.api.nvim_win_close(diagnostic_float_win, true)
+    return
+  end
+
+  diagnostic_float_win = nil
+
+  -- Open diagnostics for the current line
+  -- If this line has no diagnostics, nothing opens
+  local _, win = vim.diagnostic.open_float(0, {
+    focusable = true,
+    scope = "line",
+    border = "rounded",
+    source = "if_many",
+    max_width = 80,
+    max_height = 20,
+    close_events = { "BufLeave" },
+  })
+
+  if win and vim.api.nvim_win_is_valid(win) then
+    diagnostic_float_win = win
+  end
+end, { desc = "Show diagnostic", silent = true })
