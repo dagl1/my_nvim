@@ -332,7 +332,7 @@ vim.keymap.set("n", "<C-u>", "m`<C-u>", { noremap = true, silent = true })
 local diagnostic_float_win = nil
 
 vim.keymap.set("n", "gl", function()
-  -- Always close the previous diagnostic float first
+  -- Close the previous float, if it still exists
   if diagnostic_float_win and vim.api.nvim_win_is_valid(diagnostic_float_win) then
     vim.api.nvim_win_close(diagnostic_float_win, true)
     return
@@ -341,7 +341,6 @@ vim.keymap.set("n", "gl", function()
   diagnostic_float_win = nil
 
   -- Open diagnostics for the current line
-  -- If this line has no diagnostics, nothing opens
   local _, win = vim.diagnostic.open_float(0, {
     focusable = true,
     scope = "line",
@@ -349,10 +348,19 @@ vim.keymap.set("n", "gl", function()
     source = "if_many",
     max_width = 80,
     max_height = 20,
-    close_events = { "BufLeave" },
+    close_events = {},
   })
 
   if win and vim.api.nvim_win_is_valid(win) then
     diagnostic_float_win = win
   end
 end, { desc = "Show diagnostic", silent = true })
+
+-- Focus the diagnostic float so you can yank its contents
+vim.keymap.set("n", "<leader>dl", function()
+  if diagnostic_float_win and vim.api.nvim_win_is_valid(diagnostic_float_win) then
+    vim.api.nvim_set_current_win(diagnostic_float_win)
+  else
+    vim.notify("No diagnostic float is open", vim.log.levels.INFO)
+  end
+end, { desc = "Focus diagnostic float", silent = true })
