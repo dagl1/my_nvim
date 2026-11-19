@@ -111,6 +111,13 @@ return {
         noremap = true,
         silent = true,
       })
+      -- stack up/down
+      vim.keymap.set("n", "<leader>dn", function()
+        dap.up()
+      end, { desc = "Stack Up", noremap = true, silent = true })
+      vim.keymap.set("n", "<leader>dN", function()
+        dap.down()
+      end, { desc = "Stack Down", noremap = true, silent = true })
 
       -- Keymap to terminate debugging
       vim.keymap.set("n", "<leader>dq", function()
